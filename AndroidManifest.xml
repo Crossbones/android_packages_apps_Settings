@@ -716,6 +716,48 @@
                 android:resource="@id/application_settings" />
         </activity>
 
+        <activity android:name="Settings$CPUSettingsActivity"
+                android:label="@string/cpu_settings"
+                android:clearTaskOnLaunch="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="com.android.settings.CPU" />
+                <action android:name="android.settings.CPU" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.VOICE_LAUNCH" />
+                <category android:name="com.android.settings.SHORTCUT" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                android:value="com.android.settings.CPUSettings" />
+            <meta-data android:name="com.android.settings.TOP_LEVEL_HEADER_ID"
+                android:resource="@id/cpu_settings" />
+        </activity>
+
+        <!-- Keep compatibility with old shortcuts. -->
+        <activity-alias android:name="CPUSettings"
+                android:label="@string/cpu_settings"
+                android:clearTaskOnLaunch="true"
+                android:exported="true"
+                android:targetActivity="Settings$CPUSettingsActivity">
+            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                android:value="com.android.settings.CPUSettings" />
+            <meta-data android:name="com.android.settings.TOP_LEVEL_HEADER_ID"
+                android:resource="@id/cpu_settings" />
+        </activity-alias>
+
+        <service android:name="CPUService" >
+            <intent-filter >
+                <action android:name="CPUService" >
+                </action>
+            </intent-filter>
+        </service>
+
+        <receiver android:name="BootCompleteReceiver" android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <activity android:name="Settings$LocationSettingsActivity"
                 android:label="@string/location_settings_title"
                 android:configChanges="orientation|keyboardHidden|screenSize"
