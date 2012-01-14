@@ -37,7 +37,7 @@ import java.io.IOException;
 public class CPUSettings extends SettingsPreferenceFragment implements
         Preference.OnPreferenceChangeListener {
 
-    public static final String GOV_PREF = "cpu_gov";
+    public static final String GOV_PREF = "cpu_governor";
     public static final String GOVERNORS_LIST_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
     public static final String GOVERNOR = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor";
     public static final String MIN_FREQ_PREF = "cpu_freq_min";
@@ -45,16 +45,20 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     public static final String FREQ_LIST_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies";
     public static final String FREQ_MAX_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
     public static final String FREQ_MIN_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq";
+    public static final String SCHED_PREF = "cpu_scheduler";
+    public static final String SCHEDULER_FILE = "/sys/block/mtdblock4/queue/scheduler";
 
     private static final String TAG = "CPUSettings";
 
     private String mGovernorFormat;
     private String mMinFrequencyFormat;
     private String mMaxFrequencyFormat;
+    private String mSchedulerFormat;
 
     private ListPreference mGovernorPref;
     private ListPreference mMinFrequencyPref;
     private ListPreference mMaxFrequencyPref;
+    private ListPreference mSchedulerPref;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -63,10 +67,13 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         mGovernorFormat = getString(R.string.cpu_governors_summary);
         mMinFrequencyFormat = getString(R.string.cpu_min_freq_summary);
         mMaxFrequencyFormat = getString(R.string.cpu_max_freq_summary);
+        mSchedulerFormat = getString(R.string.cpu_scheduler_summary);
 
         String[] availableGovernors = readOneLine(GOVERNORS_LIST_FILE).split(" ");
         String[] availableFrequencies = readOneLine(FREQ_LIST_FILE).split(" ");
+        String[] availableSchedulers = readOneLine(SCHEDULER_FILE).split(" ");
         String[] frequencies;
+        String schedulerCurrent;
         String temp;
 
         frequencies = new String[availableFrequencies.length];
@@ -74,22 +81,23 @@ public class CPUSettings extends SettingsPreferenceFragment implements
             frequencies[i] = toMHz(availableFrequencies[i]);
         }
 
+        schedulerCurrent = getCurrentScheduler(availableSchedulers);
+
         addPreferencesFromResource(R.xml.cpu_settings);
 
         PreferenceScreen PrefScreen = getPreferenceScreen();
-    
+
         temp = readOneLine(GOVERNOR);
 
-        mGovernorPref = (ListPreference) PrefScreen.findPreference(GOV_PREF);
-        mGovernorPref.setEntryValues(availableGovernors);
-        mGovernorPref.setEntries(availableGovernors);
-        mGovernorPref.setValue(temp);
-        mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
-        mGovernorPref.setOnPreferenceChangeListener(this);
-
-        /* Some systems might not use governors */
         if (temp == null) {
             PrefScreen.removePreference(mGovernorPref);
+        } else {
+            mGovernorPref = (ListPreference) PrefScreen.findPreference(GOV_PREF);
+            mGovernorPref.setEntryValues(availableGovernors);
+            mGovernorPref.setEntries(availableGovernors);
+            mGovernorPref.setValue(temp);
+            mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
+            mGovernorPref.setOnPreferenceChangeListener(this);
         }
 
         temp = readOneLine(FREQ_MIN_FILE);
@@ -109,6 +117,19 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         mMaxFrequencyPref.setValue(temp);
         mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz(temp)));
         mMaxFrequencyPref.setOnPreferenceChangeListener(this);
+
+        temp = readOneLine(SCHEDULER_FILE);
+        if (temp == null) {
+            PrefScreen.removePreference(mSchedulerPref);
+        } else {
+            mSchedulerPref = (ListPreference) PrefScreen.findPreference(SCHED_PREF);
+            mSchedulerPref.setEntryValues(availableSchedulers);
+            mSchedulerPref.setEntries(availableSchedulers);
+            mSchedulerPref.setValue(getCurrentScheduler(availableSchedulers));
+            mSchedulerPref.setSummary(String.format(mSchedulerFormat, getCurrentScheduler(availableSchedulers)));
+            mSchedulerPref.setOnPreferenceChangeListener(this);
+        }
+
     }
 
     @Override
@@ -127,6 +148,8 @@ public class CPUSettings extends SettingsPreferenceFragment implements
 
         temp = readOneLine(GOVERNOR);
         mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
+
+        mSchedulerPref.setSummary(String.format(mSchedulerFormat, getCurrentScheduler(readOneLine(SCHEDULER_FILE).split(" "))));
     }
 
     public boolean onPreferenceChange(Preference preference, Object newValue) {
@@ -139,6 +162,8 @@ public class CPUSettings extends SettingsPreferenceFragment implements
                 fname = FREQ_MIN_FILE;
             } else if (preference == mMaxFrequencyPref) {
                 fname = FREQ_MAX_FILE;
+            } else if (preference == mSchedulerPref) {
+                fname = SCHEDULER_FILE;
             }
 
             if (writeOneLine(fname, (String) newValue)) {
@@ -150,6 +175,8 @@ public class CPUSettings extends SettingsPreferenceFragment implements
                 } else if (preference == mMaxFrequencyPref) {
                     mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat,
                             toMHz((String) newValue)));
+                } else if (preference == mSchedulerPref) {
+                    mSchedulerPref.setSummary(String.format(mSchedulerFormat, (String) newValue));
                 }
                 return true;
             } else {
@@ -194,5 +221,18 @@ public class CPUSettings extends SettingsPreferenceFragment implements
 
     private String toMHz(String mhzString) {
         return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" MHz").toString();
+    }
+
+    private String getCurrentScheduler(String[] available) {
+        String[] schedulers = new String[available.length];
+        int current = 0;
+        for (int i = 0; i < schedulers.length; i++) {
+            if(available[i].startsWith("[")) {
+                available[i] = available[i].substring(1, available[i].length() - 1);
+                current = i;
+                break;
+            }
+        }
+        return available[current];
     }
 }
