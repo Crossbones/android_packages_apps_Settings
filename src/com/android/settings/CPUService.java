@@ -46,7 +46,9 @@ public class CPUService extends IntentService {
         String governor = prefs.getString(CPUSettings.GOV_PREF, null);
         String minFrequency = prefs.getString(CPUSettings.MIN_FREQ_PREF, null);
         String maxFrequency = prefs.getString(CPUSettings.MAX_FREQ_PREF, null);
-        boolean noSettings = (governor == null) && (minFrequency == null) && (maxFrequency == null);
+        String scheduler = prefs.getString(CPUSettings.SCHED_PREF, null);
+
+        boolean noSettings = (governor == null) && (minFrequency == null) && (maxFrequency == null) && (scheduler == null);
 
         if (noSettings) {
             Log.d(TAG, "No settings saved. Nothing to restore.");
@@ -55,6 +57,8 @@ public class CPUService extends IntentService {
                     CPUSettings.GOVERNORS_LIST_FILE).split(" "));
             List<String> frequencies = Arrays.asList(CPUSettings.readOneLine(
                     CPUSettings.FREQ_LIST_FILE).split(" "));
+            List<String> schedulers = Arrays.asList(CPUSettings.readOneLine(
+                    CPUSettings.SCHEDULER_FILE).split(" "));
             if (governor != null && governors.contains(governor)) {
                 CPUSettings.writeOneLine(CPUSettings.GOVERNOR, governor);
             }
@@ -63,6 +67,9 @@ public class CPUService extends IntentService {
             }
             if (minFrequency != null && frequencies.contains(minFrequency)) {
                 CPUSettings.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+            }
+            if (scheduler != null && schedulers.contains(scheduler)) {
+                CPUSettings.writeOneLine(CPUSettings.SCHEDULER, scheduler);
             }
             Log.d(TAG, "CPU settings restored.");
         }
