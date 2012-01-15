@@ -22,11 +22,11 @@ import android.content.Intent;
 import android.util.Log;
 
 public class BootCompleteReceiver extends BroadcastReceiver {
-	private static final String LOG_TAG = "CPUService.BootCompleteReceiver";
+	private static final String LOG_TAG = "Settings.BootCompleteReceiver";
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		Log.d(LOG_TAG, "starting service");
-		context.startService(new Intent(context, CPUService.class));
+		context.startService(new Intent(context, OnBootCompleted.class));
 	}
 	
 }

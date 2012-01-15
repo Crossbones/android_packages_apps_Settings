@@ -31,11 +31,11 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-public class CPUService extends IntentService {
+public class OnBootCompleted extends IntentService {
 
-    private static final String TAG = "CPUService";
-	public CPUService() {
-		super("CPUService");
+    private static final String TAG = "Settings.OnBootCompleted";
+	public OnBootCompleted() {
+		super("OnBootCompleted");
 	}
 
 	@Override

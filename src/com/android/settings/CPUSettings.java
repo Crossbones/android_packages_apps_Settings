@@ -81,8 +81,6 @@ public class CPUSettings extends SettingsPreferenceFragment implements
             frequencies[i] = toMHz(availableFrequencies[i]);
         }
 
-        schedulerCurrent = getCurrentScheduler(availableSchedulers);
-
         addPreferencesFromResource(R.xml.cpu_settings);
 
         PreferenceScreen PrefScreen = getPreferenceScreen();
@@ -122,11 +120,12 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         if (temp == null) {
             PrefScreen.removePreference(mSchedulerPref);
         } else {
+            schedulerCurrent = getCurrentScheduler(availableSchedulers);
             mSchedulerPref = (ListPreference) PrefScreen.findPreference(SCHED_PREF);
             mSchedulerPref.setEntryValues(availableSchedulers);
             mSchedulerPref.setEntries(availableSchedulers);
-            mSchedulerPref.setValue(getCurrentScheduler(availableSchedulers));
-            mSchedulerPref.setSummary(String.format(mSchedulerFormat, getCurrentScheduler(availableSchedulers)));
+            mSchedulerPref.setValue(schedulerCurrent);
+            mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerCurrent));
             mSchedulerPref.setOnPreferenceChangeListener(this);
         }
 
@@ -135,6 +134,8 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     @Override
     public void onResume() {
         String temp;
+        String schedulerResume;
+        String[] availableSchedulersResume;
 
         super.onResume();
 
@@ -149,7 +150,11 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         temp = readOneLine(GOVERNOR);
         mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
 
-        mSchedulerPref.setSummary(String.format(mSchedulerFormat, getCurrentScheduler(readOneLine(SCHEDULER_FILE).split(" "))));
+        availableSchedulersResume = readOneLine(SCHEDULER_FILE).split(" ");
+       // temp = readOneLine(SCHEDULER_FILE.split(" "));
+        schedulerResume = getCurrentScheduler(availableSchedulersResume);
+        mSchedulerPref.setValue(schedulerResume);
+        mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerResume));
     }
 
     public boolean onPreferenceChange(Preference preference, Object newValue) {
