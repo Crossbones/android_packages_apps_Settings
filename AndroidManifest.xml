@@ -745,9 +745,9 @@
                 android:resource="@id/cpu_settings" />
         </activity-alias>
 
-        <service android:name="CPUService" >
+        <service android:name="OnBootCompleted" >
             <intent-filter >
-                <action android:name="CPUService" >
+                <action android:name="OnBootCompleted" >
                 </action>
             </intent-filter>
         </service>
