@@ -67,7 +67,7 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         mGovernorFormat = getString(R.string.cpu_governors_summary);
         mMinFrequencyFormat = getString(R.string.cpu_min_freq_summary);
         mMaxFrequencyFormat = getString(R.string.cpu_max_freq_summary);
-        mSchedulerFormat = getString(R.string.cpu_scheduler_summary);
+        mSchedulerFormat = getString(R.string.cpu_schedulers_summary);
 
         String[] availableGovernors = readOneLine(GOVERNORS_LIST_FILE).split(" ");
         String[] availableFrequencies = readOneLine(FREQ_LIST_FILE).split(" ");
