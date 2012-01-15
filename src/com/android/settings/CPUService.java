@@ -69,7 +69,7 @@ public class CPUService extends IntentService {
                 CPUSettings.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
             }
             if (scheduler != null && schedulers.contains(scheduler)) {
-                CPUSettings.writeOneLine(CPUSettings.SCHEDULER, scheduler);
+                CPUSettings.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
             }
             Log.d(TAG, "CPU settings restored.");
         }
