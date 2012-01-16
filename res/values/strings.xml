@@ -3795,4 +3795,10 @@ found in the list of installed apps.</string>
     <string name="cpu_schedulers_title">Sheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
 
+    <!-- BLN settings -->
+    <string name="bln_title">BLN</string>
+    <string name="bln_summary">Enable capacitive buttons to emulate LED notifications</string>
+    <string name="bln_blink_title">BLN blink</string>
+    <string name="bln_blink_summary">Capacitive buttons will blink when notification is received</string>
+
 </resources>

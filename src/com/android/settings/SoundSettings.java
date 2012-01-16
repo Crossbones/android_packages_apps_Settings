@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2012 Crossbones Software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +47,11 @@ import android.provider.Settings.SettingNotFoundException;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 
 public class SoundSettings extends SettingsPreferenceFragment implements
@@ -69,6 +75,13 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private static final String KEY_NOTIFICATION_SOUND = "notification_sound";
     private static final String KEY_CATEGORY_CALLS = "category_calls";
 
+    public static final String KEY_BLN = "bln";
+    public static final String KEY_BLN_BLINK = "bln_blink";
+    public static final String BLN_FILE = "/sys/class/misc/backlightnotification/enabled";
+    public static final String BLN_BLINK_FILE = "/sys/class/misc/backlightnotification/in_kernel_blink";
+    private boolean blnExists = new File(BLN_FILE).exists();
+    private boolean blnBlinkExists = new File(BLN_BLINK_FILE).exists();
+
     private static final String SILENT_MODE_OFF = "off";
     private static final String SILENT_MODE_VIBRATE = "vibrate";
     private static final String SILENT_MODE_MUTE = "mute";
@@ -90,6 +103,9 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private CheckBoxPreference mLockSounds;
     private Preference mRingtonePreference;
     private Preference mNotificationPreference;
+
+    public CheckBoxPreference mBln;
+    public CheckBoxPreference mBlnBlink;
 
     private Runnable mRingtoneLookupRunnable;
 
@@ -123,6 +139,9 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ContentResolver resolver = getContentResolver();
+
+        String bln;
+
         int activePhoneType = TelephonyManager.getDefault().getCurrentPhoneType();
 
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -140,6 +159,24 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             findPreference(KEY_RING_VOLUME).setDependency(null);
         } else {
             mSilentMode.setOnPreferenceChangeListener(this);
+        }
+
+        mBln = (CheckBoxPreference) findPreference(KEY_BLN);
+        mBlnBlink = (CheckBoxPreference) findPreference(KEY_BLN_BLINK);
+
+        if (!blnExists) {
+            getPreferenceScreen().removePreference(findPreference(KEY_BLN));
+            getPreferenceScreen().removePreference(findPreference(KEY_BLN_BLINK));
+        } else {
+            bln = readOneLine(BLN_FILE);
+            mBln.setOnPreferenceChangeListener(this);
+            if (mBln.isChecked()) {
+                bln = readOneLine(BLN_BLINK_FILE);
+                mBlnBlink.setOnPreferenceChangeListener(this);
+                mBlnBlink.setEnabled(true);
+            } else {
+                mBlnBlink.setEnabled(false);
+            }
         }
 
         mVibrateOnRing = (CheckBoxPreference) findPreference(KEY_VIBRATE);
@@ -338,8 +375,25 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         } else if (preference == mMusicFx) {
             // let the framework fire off the intent
             return false;
+        } else if (preference == mBln) {
+            String blnChecked;
+            if (!mBln.isChecked()) {
+                blnChecked="0";
+                mBlnBlink.setEnabled(false);
+            } else {
+                blnChecked="1";
+                mBlnBlink.setEnabled(true);
+            }
+            writeOneLine(BLN_FILE, blnChecked);
+        } else if (preference == mBlnBlink) {
+            String blnBlinkChecked;
+            if (!mBlnBlink.isChecked()) {
+                blnBlinkChecked="0";
+            } else {
+                blnBlinkChecked="1";
+            }
+            writeOneLine(BLN_BLINK_FILE, blnBlinkChecked);
         }
-
         return true;
     }
 
@@ -359,6 +413,39 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             setPhoneSilentSettingValue(objValue.toString());
         }
 
+        return true;
+    }
+
+    public static String readOneLine(String fname) {
+        BufferedReader br;
+        String line = null;
+
+        try {
+            br = new BufferedReader(new FileReader(fname), 512);
+            try {
+                line = br.readLine();
+            } finally {
+                br.close();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "IO Exception when reading /sys/ file", e);
+        }
+        return line;
+    }
+
+    public static boolean writeOneLine(String fname, String value) {
+        try {
+            FileWriter fw = new FileWriter(fname);
+            try {
+                fw.write(value);
+            } finally {
+                fw.close();
+            }
+        } catch (IOException e) {
+            String Error = "Error writing to " + fname + ". Exception: ";
+            Log.e(TAG, Error, e);
+            return false;
+        }
         return true;
     }
 }
