@@ -71,7 +71,7 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment {
 
         setStringSummary(KEY_FIRMWARE_VERSION, Build.VERSION.RELEASE);
         findPreference(KEY_FIRMWARE_VERSION).setEnabled(true);
-        setValueSummary(KEY_ROM_VERSION, "ro.build.romversion");
+        setValueSummary(KEY_ROM_VERSION, "ro.modversion");
         findPreference(KEY_ROM_VERSION).setEnabled(true);
         setValueSummary(KEY_BASEBAND_VERSION, "gsm.version.baseband");
         setStringSummary(KEY_DEVICE_MODEL, Build.MODEL + getMsvSuffix());
