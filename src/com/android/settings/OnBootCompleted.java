@@ -28,6 +28,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.File;
+import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -45,6 +46,7 @@ public class OnBootCompleted extends IntentService {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         String governor = prefs.getString(CPUSettings.GOV_PREF, null);
+        String existsFrequency = CPUSettings.readOneLine("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies");
         String minFrequency = prefs.getString(CPUSettings.MIN_FREQ_PREF, null);
         String maxFrequency = prefs.getString(CPUSettings.MAX_FREQ_PREF, null);
         String scheduler = prefs.getString(CPUSettings.SCHED_PREF, null);
@@ -58,23 +60,29 @@ public class OnBootCompleted extends IntentService {
         if (noSettings) {
             Log.d(TAG, "No settings saved. No kernel specific settings to restore.");
         } else {
-            List<String> governors = Arrays.asList(CPUSettings.readOneLine(
-                    CPUSettings.GOVERNORS_LIST_FILE).split(" "));
-            List<String> frequencies = Arrays.asList(CPUSettings.readOneLine(
-                    CPUSettings.FREQ_LIST_FILE).split(" "));
-            List<String> schedulers = Arrays.asList(CPUSettings.readOneLine(
-                    CPUSettings.SCHEDULER_FILE).split(" "));
-            if (governor != null && governors.contains(governor)) {
-                CPUSettings.writeOneLine(CPUSettings.GOVERNOR, governor);
+            if (governor != null) {
+                List<String> governors = Arrays.asList(CPUSettings.readOneLine(
+                        CPUSettings.GOVERNORS_LIST_FILE).split(" "));
+                if(governors.contains(governor)) {
+                    CPUSettings.writeOneLine(CPUSettings.GOVERNOR, governor);
+                }
             }
-            if (maxFrequency != null && frequencies.contains(maxFrequency)) {
-                CPUSettings.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
+            if (existsFrequency != null) {
+                List<String> frequencies = Arrays.asList(CPUSettings.readOneLine(
+                        CPUSettings.FREQ_LIST_FILE).split(" "));
+                if (maxFrequency != null && frequencies.contains(maxFrequency)) {
+                    CPUSettings.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
+                }
+                if (minFrequency != null && frequencies.contains(minFrequency)) {
+                    CPUSettings.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+                }
             }
-            if (minFrequency != null && frequencies.contains(minFrequency)) {
-                CPUSettings.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
-            }
-            if (scheduler != null && schedulers.contains(scheduler)) {
-                CPUSettings.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
+            if (scheduler != null) {
+                List<String> schedulers = Arrays.asList(CPUSettings.readOneLine(
+                        CPUSettings.SCHEDULER_FILE).split(" "));
+                if (schedulers.contains(scheduler)) {
+                    CPUSettings.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
+                }
             }
             if (bln == false || blnExists == false) {
                 SoundSettings.writeOneLine(SoundSettings.BLN_FILE, "0");

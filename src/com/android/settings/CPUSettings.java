@@ -27,6 +27,7 @@ import android.preference.PreferenceScreen;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -43,8 +44,8 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     public static final String MIN_FREQ_PREF = "cpu_freq_min";
     public static final String MAX_FREQ_PREF = "cpu_freq_max";
     public static final String FREQ_LIST_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies";
-    public static final String FREQ_MAX_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
     public static final String FREQ_MIN_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq";
+    public static final String FREQ_MAX_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
     public static final String SCHED_PREF = "cpu_scheduler";
     public static final String SCHEDULER_FILE = "/sys/block/mtdblock4/queue/scheduler";
 
@@ -69,28 +70,29 @@ public class CPUSettings extends SettingsPreferenceFragment implements
         mMaxFrequencyFormat = getString(R.string.cpu_max_freq_summary);
         mSchedulerFormat = getString(R.string.cpu_schedulers_summary);
 
-        String[] availableGovernors = readOneLine(GOVERNORS_LIST_FILE).split(" ");
-        String[] availableFrequencies = readOneLine(FREQ_LIST_FILE).split(" ");
-        String[] availableSchedulers = readOneLine(SCHEDULER_FILE).split(" ");
+        String[] availableGovernors;
+        String[] availableFrequencies;
+        String[] availableSchedulers;
         String[] frequencies;
         String schedulerCurrent;
         String temp;
-
-        frequencies = new String[availableFrequencies.length];
-        for (int i = 0; i < frequencies.length; i++) {
-            frequencies[i] = toMHz(availableFrequencies[i]);
-        }
+        String tempFreq;
 
         addPreferencesFromResource(R.xml.cpu_settings);
 
         PreferenceScreen PrefScreen = getPreferenceScreen();
 
-        temp = readOneLine(GOVERNOR);
+        mGovernorPref = (ListPreference) PrefScreen.findPreference(GOV_PREF);
+        mMinFrequencyPref = (ListPreference) PrefScreen.findPreference(MIN_FREQ_PREF);
+        mMaxFrequencyPref = (ListPreference) PrefScreen.findPreference(MAX_FREQ_PREF);
+        mSchedulerPref = (ListPreference) PrefScreen.findPreference(SCHED_PREF);
 
+        temp = readOneLine(GOVERNOR);
         if (temp == null) {
-            PrefScreen.removePreference(mGovernorPref);
+            mGovernorPref.setEnabled(false);
+            mGovernorPref.setSummary(R.string.cpu_not_supported);
         } else {
-            mGovernorPref = (ListPreference) PrefScreen.findPreference(GOV_PREF);
+            availableGovernors = readOneLine(GOVERNORS_LIST_FILE).split(" ");
             mGovernorPref.setEntryValues(availableGovernors);
             mGovernorPref.setEntries(availableGovernors);
             mGovernorPref.setValue(temp);
@@ -98,30 +100,54 @@ public class CPUSettings extends SettingsPreferenceFragment implements
             mGovernorPref.setOnPreferenceChangeListener(this);
         }
 
-        temp = readOneLine(FREQ_MIN_FILE);
+        tempFreq = readOneLine(FREQ_LIST_FILE);
 
-        mMinFrequencyPref = (ListPreference) PrefScreen.findPreference(MIN_FREQ_PREF);
-        mMinFrequencyPref.setEntryValues(availableFrequencies);
-        mMinFrequencyPref.setEntries(frequencies);
-        mMinFrequencyPref.setValue(temp);
-        mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat, toMHz(temp)));
-        mMinFrequencyPref.setOnPreferenceChangeListener(this);
+        if (tempFreq == null) {
+            mMinFrequencyPref.setEnabled(false);
+            mMaxFrequencyPref.setEnabled(false);
+            mMinFrequencyPref.setSummary(R.string.cpu_not_supported);
+            mMaxFrequencyPref.setSummary(R.string.cpu_not_supported);
+        } else {
+            temp = readOneLine(FREQ_MIN_FILE);
+            if (temp != null) {
+                availableFrequencies = readOneLine(FREQ_LIST_FILE).split(" ");
 
-        temp = readOneLine(FREQ_MAX_FILE);
+                frequencies = new String[availableFrequencies.length];
+                for (int i = 0; i < frequencies.length; i++) {
+                    frequencies[i] = toMHz(availableFrequencies[i]);
+                }
 
-        mMaxFrequencyPref = (ListPreference) PrefScreen.findPreference(MAX_FREQ_PREF);
-        mMaxFrequencyPref.setEntryValues(availableFrequencies);
-        mMaxFrequencyPref.setEntries(frequencies);
-        mMaxFrequencyPref.setValue(temp);
-        mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz(temp)));
-        mMaxFrequencyPref.setOnPreferenceChangeListener(this);
+                mMinFrequencyPref.setEntryValues(availableFrequencies);
+                mMinFrequencyPref.setEntries(frequencies);
+                mMinFrequencyPref.setValue(temp);
+                mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat, toMHz(temp)));
+                mMinFrequencyPref.setOnPreferenceChangeListener(this);
+            }
+
+            temp = readOneLine(FREQ_MAX_FILE);
+            if (temp != null) {
+                availableFrequencies = readOneLine(FREQ_LIST_FILE).split(" ");
+
+                frequencies = new String[availableFrequencies.length];
+                for (int i = 0; i < frequencies.length; i++) {
+                    frequencies[i] = toMHz(availableFrequencies[i]);
+                }
+
+                mMaxFrequencyPref.setEntryValues(availableFrequencies);
+                mMaxFrequencyPref.setEntries(frequencies);
+                mMaxFrequencyPref.setValue(temp);
+                mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz(temp)));
+                mMaxFrequencyPref.setOnPreferenceChangeListener(this);
+            }
+        }
 
         temp = readOneLine(SCHEDULER_FILE);
         if (temp == null) {
-            PrefScreen.removePreference(mSchedulerPref);
+            mSchedulerPref.setEnabled(false);
+            mSchedulerPref.setSummary(R.string.cpu_not_supported);
         } else {
+            availableSchedulers = readOneLine(SCHEDULER_FILE).split(" ");
             schedulerCurrent = getCurrentScheduler(availableSchedulers);
-            mSchedulerPref = (ListPreference) PrefScreen.findPreference(SCHED_PREF);
             mSchedulerPref.setEntryValues(availableSchedulers);
             mSchedulerPref.setEntries(availableSchedulers);
             mSchedulerPref.setValue(schedulerCurrent);
@@ -134,27 +160,39 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     @Override
     public void onResume() {
         String temp;
+        String tempFreq;
         String schedulerResume;
         String[] availableSchedulersResume;
 
         super.onResume();
 
-        temp = readOneLine(FREQ_MAX_FILE);
-        mMaxFrequencyPref.setValue(temp);
-        mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz(temp)));
-
-        temp = readOneLine(FREQ_MIN_FILE);
-        mMinFrequencyPref.setValue(temp);
-        mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat, toMHz(temp)));
-
         temp = readOneLine(GOVERNOR);
-        mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
+        if (temp != null) {
+            mGovernorPref.setSummary(String.format(mGovernorFormat, temp));
+        }
+
+        tempFreq = readOneLine(FREQ_LIST_FILE);
+
+        if (tempFreq != null) {
+            temp = readOneLine(FREQ_MIN_FILE);
+            if (temp != null) {
+                mMinFrequencyPref.setValue(temp);
+                mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat, toMHz(temp)));
+            }
+
+            temp = readOneLine(FREQ_MAX_FILE);
+            if (temp != null) {
+                mMaxFrequencyPref.setValue(temp);
+                mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz(temp)));
+            }
+        }
 
         availableSchedulersResume = readOneLine(SCHEDULER_FILE).split(" ");
-       // temp = readOneLine(SCHEDULER_FILE.split(" "));
-        schedulerResume = getCurrentScheduler(availableSchedulersResume);
-        mSchedulerPref.setValue(schedulerResume);
-        mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerResume));
+        if (availableSchedulersResume != null) {
+            schedulerResume = getCurrentScheduler(availableSchedulersResume);
+            mSchedulerPref.setValue(schedulerResume);
+            mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerResume));
+        }
     }
 
     public boolean onPreferenceChange(Preference preference, Object newValue) {
@@ -194,16 +232,18 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     public static String readOneLine(String fname) {
         BufferedReader br;
         String line = null;
-
-        try {
-            br = new BufferedReader(new FileReader(fname), 512);
+        File readFile = new File(fname);
+        if (readFile.exists()) {
             try {
-                line = br.readLine();
-            } finally {
-                br.close();
+                br = new BufferedReader(new FileReader(fname), 512);
+                try {
+                    line = br.readLine();
+                } finally {
+                    br.close();
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "IO Exception when reading /sys/ file", e);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "IO Exception when reading /sys/ file", e);
         }
         return line;
     }

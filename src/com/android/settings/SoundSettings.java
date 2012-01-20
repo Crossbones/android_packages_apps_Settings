@@ -419,16 +419,18 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     public static String readOneLine(String fname) {
         BufferedReader br;
         String line = null;
-
-        try {
-            br = new BufferedReader(new FileReader(fname), 512);
+        File readFile = new File(fname);
+        if (readFile.exists()) {
             try {
-                line = br.readLine();
-            } finally {
-                br.close();
+                br = new BufferedReader(new FileReader(fname), 512);
+                try {
+                    line = br.readLine();
+                } finally {
+                    br.close();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "IO Exception when reading /sys/ file", e);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "IO Exception when reading /sys/ file", e);
         }
         return line;
     }
