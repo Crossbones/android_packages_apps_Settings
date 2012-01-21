@@ -187,11 +187,14 @@ public class CPUSettings extends SettingsPreferenceFragment implements
             }
         }
 
-        availableSchedulersResume = readOneLine(SCHEDULER_FILE).split(" ");
-        if (availableSchedulersResume != null) {
-            schedulerResume = getCurrentScheduler(availableSchedulersResume);
-            mSchedulerPref.setValue(schedulerResume);
-            mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerResume));
+        temp = readOneLine(SCHEDULER_FILE);
+        if (temp != null) {
+            availableSchedulersResume = readOneLine(SCHEDULER_FILE).split(" ");
+            if (availableSchedulersResume != null) {
+                schedulerResume = getCurrentScheduler(availableSchedulersResume);
+                mSchedulerPref.setValue(schedulerResume);
+                mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerResume));
+            }
         }
     }
 
