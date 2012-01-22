@@ -3785,8 +3785,10 @@ found in the list of installed apps.</string>
     <!-- Crossbones additions -->
 
     <string name="donate_title">Donate to Crossbones</string>
-    <string name="donate_summary">Support Crossbones development by donating through PayPal</string>
+    <string name="donate_summary">Support Crossbones by donating through PayPal.\n\mDonations go towards the purchase of new devices, hardware, books, and anythine else related to the development of Crossbones Software.\n\nWe appreciate your support!</string>
     <string name="donate_url">https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EX9W3A7743TZS</string>
+    <string name="donate_button_text">Donate via PayPal</string>
+    <string name="cancel_button_text">Cancel</string>
 
     <!-- CPU settings -->
     <string name="cpu_settings">CPU</string>

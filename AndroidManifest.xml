@@ -716,35 +716,6 @@
                 android:resource="@id/application_settings" />
         </activity>
 
-        <activity android:name="Settings$CPUSettingsActivity"
-                android:label="@string/cpu_settings"
-                android:clearTaskOnLaunch="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="com.android.settings.CPU" />
-                <action android:name="android.settings.CPU" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.VOICE_LAUNCH" />
-                <category android:name="com.android.settings.SHORTCUT" />
-            </intent-filter>
-            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
-                android:value="com.android.settings.CPUSettings" />
-            <meta-data android:name="com.android.settings.TOP_LEVEL_HEADER_ID"
-                android:resource="@id/cpu_settings" />
-        </activity>
-
-        <!-- Keep compatibility with old shortcuts. -->
-        <activity-alias android:name="CPUSettings"
-                android:label="@string/cpu_settings"
-                android:clearTaskOnLaunch="true"
-                android:exported="true"
-                android:targetActivity="Settings$CPUSettingsActivity">
-            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
-                android:value="com.android.settings.CPUSettings" />
-            <meta-data android:name="com.android.settings.TOP_LEVEL_HEADER_ID"
-                android:resource="@id/cpu_settings" />
-        </activity-alias>
-
         <service android:name="OnBootCompleted" >
             <intent-filter >
                 <action android:name="OnBootCompleted" >
@@ -1395,7 +1366,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.app.action.START_ENCRYPTION" />
-                <category android:name="android.intent.category.DEFAULT" /> />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
                 android:value="com.android.settings.CryptKeeperSettings" />
@@ -1433,6 +1404,13 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/appwidget_info" />
         </receiver>
+
+        <activity android:name=".Donate">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.DONATE" />
+            </intent-filter>
+        </activity>
 
     </application>
 </manifest>

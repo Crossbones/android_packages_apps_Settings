@@ -80,11 +80,6 @@
             <intent android:action="android.settings.SAFETY" />
         </PreferenceScreen>
 
-        <PreferenceScreen
-            android:key="donate"
-            android:summary="@string/donate_summary"
-            android:title="@string/donate_title" />
-
         <!-- Contributors -->
         <!-- 
         <PreferenceScreen
