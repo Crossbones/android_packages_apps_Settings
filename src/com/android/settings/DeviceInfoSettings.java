@@ -21,6 +21,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -60,6 +61,7 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment {
     private static final String KEY_FIRMWARE_VERSION = "firmware_version";
     private static final String KEY_ROM_VERSION = "rom_version";
     private static final String KEY_UPDATE_SETTING = "additional_system_update_settings";
+    private static final String KEY_DONATE = "donate";
 
     long[] mHits = new long[3];
 
@@ -134,6 +136,11 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment {
                     Log.e(LOG_TAG, "Unable to start activity " + intent.toString());
                 }
             }
+        } else if (preference.getKey().equals(KEY_DONATE)) {
+            Intent browse = new Intent();
+            browse.setAction(Intent.ACTION_VIEW);
+            browse.setData(Uri.parse(getString(R.string.donate_url)));
+            startActivity(browse);
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
     }

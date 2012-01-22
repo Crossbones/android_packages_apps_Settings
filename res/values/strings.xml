@@ -3784,6 +3784,10 @@ found in the list of installed apps.</string>
 
     <!-- Crossbones additions -->
 
+    <string name="donate_title">Donate to Crossbones</string>
+    <string name="donate_summary">Support Crossbones development by donating through PayPal</string>
+    <string name="donate_url">https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=EX9W3A7743TZS</string>
+
     <!-- CPU settings -->
     <string name="cpu_settings">CPU</string>
     <string name="cpu_governors_title">Governor</string>
