@@ -14,33 +14,43 @@
      limitations under the License.
 -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/donate_layout"
-        android:title="@string/donate_title"
-        android:layout_width="fill_parent" 
-        android:layout_height="fill_parent" 
-        android:orientation="vertical" 
-        android:gravity="center_horizontal">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:fillViewport="true" >
 
-    <ImageView
-            android:id="@+id/crossbones_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:padding="10dp"
-            android:src="@drawable/crossbones_logo"/>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/donate_layout"
+            android:title="@string/donate_title"
+            android:layout_width="fill_parent" 
+            android:layout_height="fill_parent" 
+            android:orientation="vertical" 
+            android:gravity="center_horizontal">
 
-    <TextView android:id="@+id/donate_text"
-            android:layout_below="@id/crossbones_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:text="@string/donate_summary" />
 
-    <Button android:id="@+id/donate_button"
-            android:layout_below="@id/donate_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/donate_button_text" />
 
-</LinearLayout>
+        <ImageView
+                android:id="@+id/crossbones_logo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:padding="10dp"
+                android:src="@drawable/crossbones_logo"/>
+
+        <TextView android:id="@+id/donate_text"
+                android:layout_below="@id/crossbones_logo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/donate_summary" />
+
+        <Button android:id="@+id/donate_button"
+                android:layout_below="@id/donate_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/donate_button_text" />
+
+
+    </LinearLayout>
+</ScrollView>
+
