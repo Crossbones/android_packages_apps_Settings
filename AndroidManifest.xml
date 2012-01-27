@@ -1405,12 +1405,5 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/appwidget_info" />
         </receiver>
 
-        <activity android:name=".Donate">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.intent.action.DONATE" />
-            </intent-filter>
-        </activity>
-
     </application>
 </manifest>

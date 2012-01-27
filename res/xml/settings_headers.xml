@@ -160,8 +160,8 @@
         android:id="@+id/donate" >
         <intent
             android:action="android.intent.action.DONATE"
-            android:targetPackage="com.android.settings"
-            android:targetClass="com.android.settings.Donate" />
+            android:targetPackage="com.crossbones.donate"
+            android:targetClass="com.crossbones.donate.Donate" />
      </header>
 
     <!-- Dock -->
