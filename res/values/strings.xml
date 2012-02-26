@@ -3795,7 +3795,7 @@ found in the list of installed apps.</string>
     <string name="cpu_min_freq_summary">Minimum CPU frequency\nCurrently: %s</string>
     <string name="cpu_max_freq_title">Max CPU frequency</string>
     <string name="cpu_max_freq_summary">Maximum CPU frequency\nCurrently: %s</string>
-    <string name="cpu_schedulers_title">Sheduler</string>
+    <string name="cpu_schedulers_title">Scheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
     <string name="cpu_not_supported">Your kernel does not support this feature</string>
 
