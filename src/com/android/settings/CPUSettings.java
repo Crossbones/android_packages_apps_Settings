@@ -47,7 +47,7 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     public static final String FREQ_MIN_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq";
     public static final String FREQ_MAX_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
     public static final String SCHED_PREF = "cpu_scheduler";
-    public static final String SCHEDULER_FILE = "/sys/block/mtdblock4/queue/scheduler";
+    public static final String SCHEDULER_FILE = "/sys/block/mmcblk0/queue/scheduler";
 
     private static final String TAG = "CPUSettings";
 
