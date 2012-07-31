@@ -23,14 +23,15 @@
     android:orientation="vertical"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal"
 >
 
     <com.android.internal.widget.DigitalClock android:id="@+id/time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
         android:layout_marginTop="8dip"
+        android:layout_gravity="center"
         android:layout_marginBottom="8dip"
         >
 
@@ -61,16 +62,6 @@
             />
 
     </com.android.internal.widget.DigitalClock>
-
-    <TextView
-        android:id="@+id/date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/time"
-        android:layout_marginTop="10dip"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:textSize="22sp"
-        />
 
     <TextView
         android:id="@+id/status"

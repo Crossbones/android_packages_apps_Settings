@@ -39,6 +39,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSubtype;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Comparator;
 import java.util.List;
@@ -51,6 +52,7 @@ public class InputMethodPreference extends CheckBoxPreference
     private final InputMethodInfo mImi;
     private final InputMethodManager mImm;
     private final Intent mSettingsIntent;
+    private final boolean mAlwaysChecked;
     private final boolean mIsSystemIme;
 
     private AlertDialog mDialog = null;
@@ -66,10 +68,10 @@ public class InputMethodPreference extends CheckBoxPreference
                 return;
             }
             if (isChecked()) {
-                setChecked(false);
+                setChecked(false, true /* save */);
             } else {
                 if (mIsSystemIme) {
-                    setChecked(true);
+                    setChecked(true, true /* save */);
                 } else {
                     showSecurityWarnDialog(mImi, InputMethodPreference.this);
                 }
@@ -87,9 +89,10 @@ public class InputMethodPreference extends CheckBoxPreference
         mImm = imm;
         mImi = imi;
         updateSummary();
+        mAlwaysChecked = InputMethodAndSubtypeUtil.isAlwaysCheckedIme(
+                imi, fragment.getActivity(), imiCount);
         mIsSystemIme = InputMethodAndSubtypeUtil.isSystemIme(imi);
-        final boolean isAuxIme = InputMethodAndSubtypeUtil.isAuxiliaryIme(imi);
-        if (imiCount <= 1 || (mIsSystemIme && !isAuxIme)) {
+        if (mAlwaysChecked) {
             setEnabled(false);
         }
     }
@@ -126,8 +129,12 @@ public class InputMethodPreference extends CheckBoxPreference
                                 mFragment.startActivity(mSettingsIntent);
                             } catch (ActivityNotFoundException e) {
                                 Log.d(TAG, "IME's Settings Activity Not Found: " + e);
-                                // If the IME's settings activity does not exist, we can just
-                                // do nothing...
+                                final String msg = mFragment.getString(
+                                        R.string.failed_to_open_app_settings_toast,
+                                        mImi.loadLabel(
+                                                mFragment.getActivity().getPackageManager()));
+                                Toast.makeText(
+                                        mFragment.getActivity(), msg, Toast.LENGTH_LONG).show();
                             }
                         }
                     });
@@ -222,14 +229,25 @@ public class InputMethodPreference extends CheckBoxPreference
         setSummary(summary);
     }
 
-    @Override
-    public void setChecked(boolean checked) {
+    /**
+     * Sets the checkbox state and optionally saves the settings.
+     * @param checked whether to check the box
+     * @param save whether to save IME settings
+     */
+    public void setChecked(boolean checked, boolean save) {
         super.setChecked(checked);
-        saveImeSettings();
+        if (save) {
+            saveImeSettings();
+        }
         updateSummary();
     }
 
-    private void showSecurityWarnDialog(InputMethodInfo imi, final CheckBoxPreference chkPref) {
+    @Override
+    public void setChecked(boolean checked) {
+        setChecked(checked, false);
+    }
+
+    private void showSecurityWarnDialog(InputMethodInfo imi, final InputMethodPreference chkPref) {
         if (mDialog != null && mDialog.isShowing()) {
             mDialog.dismiss();
         }
@@ -241,7 +259,7 @@ public class InputMethodPreference extends CheckBoxPreference
                         new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        chkPref.setChecked(true);
+                        chkPref.setChecked(true, true);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel,

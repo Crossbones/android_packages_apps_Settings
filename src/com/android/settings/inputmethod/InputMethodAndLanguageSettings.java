@@ -17,6 +17,7 @@
 package com.android.settings.inputmethod;
 
 import com.android.settings.R;
+import com.android.settings.Settings.KeyboardLayoutPickerActivity;
 import com.android.settings.Settings.SpellCheckersSettingsActivity;
 import com.android.settings.SettingsPreferenceFragment;
 import com.android.settings.Utils;
@@ -28,28 +29,32 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.database.ContentObserver;
+import android.hardware.input.InputManager;
+import android.hardware.input.KeyboardLayout;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
-import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.provider.Settings.System;
 import android.text.TextUtils;
+import android.view.InputDevice;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.TreeSet;
 
 public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
-        implements Preference.OnPreferenceChangeListener{
+        implements Preference.OnPreferenceChangeListener, InputManager.InputDeviceListener,
+        KeyboardLayoutDialogFragment.OnSetupKeyboardLayoutsListener {
 
     private static final String KEY_PHONE_LANGUAGE = "phone_language";
     private static final String KEY_CURRENT_INPUT_METHOD = "current_input_method";
@@ -68,17 +73,22 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
 
     private int mDefaultInputMethodSelectorVisibility = 0;
     private ListPreference mShowInputMethodSelectorPref;
-    private Preference mLanguagePref;
-    private ArrayList<InputMethodPreference> mInputMethodPreferenceList =
-            new ArrayList<InputMethodPreference>();
-    private boolean mHaveHardKeyboard;
+    private PreferenceCategory mKeyboardSettingsCategory;
     private PreferenceCategory mHardKeyboardCategory;
+    private PreferenceCategory mGameControllerCategory;
+    private Preference mLanguagePref;
+    private final ArrayList<InputMethodPreference> mInputMethodPreferenceList =
+            new ArrayList<InputMethodPreference>();
+    private final ArrayList<PreferenceScreen> mHardKeyboardPreferenceList =
+            new ArrayList<PreferenceScreen>();
+    private InputManager mIm;
     private InputMethodManager mImm;
     private List<InputMethodInfo> mImis;
     private boolean mIsOnlyImeSettings;
     private Handler mHandler;
     @SuppressWarnings("unused")
     private SettingsObserver mSettingsObserver;
+    private Intent mIntentWaitingForResult;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -108,18 +118,58 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
 
         new VoiceInputOutputSettings(this).onCreate();
 
-        // Hard keyboard
-        final Configuration config = getResources().getConfiguration();
-        mHaveHardKeyboard = (config.keyboard == Configuration.KEYBOARD_QWERTY);
+        // Get references to dynamically constructed categories.
+        mHardKeyboardCategory = (PreferenceCategory)findPreference("hard_keyboard");
+        mKeyboardSettingsCategory = (PreferenceCategory)findPreference(
+                "keyboard_settings_category");
+        mGameControllerCategory = (PreferenceCategory)findPreference(
+                "game_controller_settings_category");
 
-        // IME
+        // Filter out irrelevant features if invoked from IME settings button.
         mIsOnlyImeSettings = Settings.ACTION_INPUT_METHOD_SETTINGS.equals(
                 getActivity().getIntent().getAction());
         getActivity().getIntent().setAction(null);
+        if (mIsOnlyImeSettings) {
+            getPreferenceScreen().removeAll();
+            getPreferenceScreen().addPreference(mHardKeyboardCategory);
+            if (SHOW_INPUT_METHOD_SWITCHER_SETTINGS) {
+                getPreferenceScreen().addPreference(mShowInputMethodSelectorPref);
+            }
+            getPreferenceScreen().addPreference(mKeyboardSettingsCategory);
+        }
+
+        // Build IME preference category.
         mImm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         mImis = mImm.getInputMethodList();
-        createImePreferenceHierarchy((PreferenceGroup)findPreference("keyboard_settings_category"));
 
+        mKeyboardSettingsCategory.removeAll();
+        if (!mIsOnlyImeSettings) {
+            final PreferenceScreen currentIme = new PreferenceScreen(getActivity(), null);
+            currentIme.setKey(KEY_CURRENT_INPUT_METHOD);
+            currentIme.setTitle(getResources().getString(R.string.current_input_method));
+            mKeyboardSettingsCategory.addPreference(currentIme);
+        }
+
+        mInputMethodPreferenceList.clear();
+        final int N = (mImis == null ? 0 : mImis.size());
+        for (int i = 0; i < N; ++i) {
+            final InputMethodInfo imi = mImis.get(i);
+            final InputMethodPreference pref = getInputMethodPreference(imi, N);
+            mInputMethodPreferenceList.add(pref);
+        }
+
+        if (!mInputMethodPreferenceList.isEmpty()) {
+            Collections.sort(mInputMethodPreferenceList);
+            for (int i = 0; i < N; ++i) {
+                mKeyboardSettingsCategory.addPreference(mInputMethodPreferenceList.get(i));
+            }
+        }
+
+        // Build hard keyboard and game controller preference categories.
+        mIm = (InputManager)getActivity().getSystemService(Context.INPUT_SERVICE);
+        updateInputDevices();
+
+        // Spell Checker
         final Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.setClass(getActivity(), SpellCheckersSettingsActivity.class);
         final SpellCheckersPreference scp = ((SpellCheckersPreference)findPreference(
@@ -143,7 +193,7 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
 
     private void updateUserDictionaryPreference(Preference userDictionaryPreference) {
         final Activity activity = getActivity();
-        final Set<String> localeList = UserDictionaryList.getUserDictionaryLocalesList(activity);
+        final TreeSet<String> localeList = UserDictionaryList.getUserDictionaryLocalesSet(activity);
         if (null == localeList) {
             // The locale list is null if and only if the user dictionary service is
             // not present or disabled. In this case we need to remove the preference.
@@ -153,12 +203,14 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
                     new Intent(UserDictionaryList.USER_DICTIONARY_SETTINGS_INTENT_ACTION);
             userDictionaryPreference.setTitle(R.string.user_dict_single_settings_title);
             userDictionaryPreference.setIntent(intent);
+            userDictionaryPreference.setFragment(
+                    com.android.settings.UserDictionarySettings.class.getName());
             // If the size of localeList is 0, we don't set the locale parameter in the
             // extras. This will be interpreted by the UserDictionarySettings class as
             // meaning "the current locale".
-            // Note that with the current code for UserDictionaryList#getUserDictionaryLocalesList()
+            // Note that with the current code for UserDictionaryList#getUserDictionaryLocalesSet()
             // the locale list always has at least one element, since it always includes the current
-            // locale explicitly. @see UserDictionaryList.getUserDictionaryLocalesList().
+            // locale explicitly. @see UserDictionaryList.getUserDictionaryLocalesSet().
             if (localeList.size() == 1) {
                 final String locale = (String)localeList.toArray()[0];
                 userDictionaryPreference.getExtras().putString("locale", locale);
@@ -172,13 +224,29 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
     @Override
     public void onResume() {
         super.onResume();
+
+        mIm.registerInputDeviceListener(this, null);
+
         if (!mIsOnlyImeSettings) {
             if (mLanguagePref != null) {
                 Configuration conf = getResources().getConfiguration();
-                String locale = conf.locale.getDisplayName(conf.locale);
-                if (locale != null && locale.length() > 1) {
-                    locale = Character.toUpperCase(locale.charAt(0)) + locale.substring(1);
-                    mLanguagePref.setSummary(locale);
+                String language = conf.locale.getLanguage();
+                String localeString;
+                // TODO: This is not an accurate way to display the locale, as it is
+                // just working around the fact that we support limited dialects
+                // and want to pretend that the language is valid for all locales.
+                // We need a way to support languages that aren't tied to a particular
+                // locale instead of hiding the locale qualifier.
+                if (hasOnlyOneLanguageInstance(language,
+                        Resources.getSystem().getAssets().getLocales())) {
+                    localeString = conf.locale.getDisplayLanguage(conf.locale);
+                } else {
+                    localeString = conf.locale.getDisplayName(conf.locale);
+                }
+                if (localeString.length() > 1) {
+                    localeString = Character.toUpperCase(localeString.charAt(0))
+                            + localeString.substring(1);
+                    mLanguagePref.setSummary(localeString);
                 }
             }
 
@@ -189,7 +257,7 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
         }
 
         // Hard keyboard
-        if (mHaveHardKeyboard) {
+        if (!mHardKeyboardPreferenceList.isEmpty()) {
             for (int i = 0; i < sHardKeyboardKeys.length; ++i) {
                 CheckBoxPreference chkPref = (CheckBoxPreference)
                         mHardKeyboardCategory.findPreference(sHardKeyboardKeys[i]);
@@ -197,6 +265,8 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
                         System.getInt(getContentResolver(), sSystemSettingNames[i], 1) > 0);
             }
         }
+
+        updateInputDevices();
 
         // IME
         InputMethodAndSubtypeUtil.loadInputMethodSubtypeList(
@@ -207,11 +277,29 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
     @Override
     public void onPause() {
         super.onPause();
+
+        mIm.unregisterInputDeviceListener(this);
+
         if (SHOW_INPUT_METHOD_SWITCHER_SETTINGS) {
             mShowInputMethodSelectorPref.setOnPreferenceChangeListener(null);
         }
         InputMethodAndSubtypeUtil.saveInputMethodSubtypeList(
-                this, getContentResolver(), mImis, mHaveHardKeyboard);
+                this, getContentResolver(), mImis, !mHardKeyboardPreferenceList.isEmpty());
+    }
+
+    @Override
+    public void onInputDeviceAdded(int deviceId) {
+        updateInputDevices();
+    }
+
+    @Override
+    public void onInputDeviceChanged(int deviceId) {
+        updateInputDevices();
+    }
+
+    @Override
+    public void onInputDeviceRemoved(int deviceId) {
+        updateInputDevices();
     }
 
     @Override
@@ -230,7 +318,7 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
             }
         } else if (preference instanceof CheckBoxPreference) {
             final CheckBoxPreference chkPref = (CheckBoxPreference) preference;
-            if (mHaveHardKeyboard) {
+            if (!mHardKeyboardPreferenceList.isEmpty()) {
                 for (int i = 0; i < sHardKeyboardKeys.length; ++i) {
                     if (chkPref == mHardKeyboardCategory.findPreference(sHardKeyboardKeys[i])) {
                         System.putInt(getContentResolver(), sSystemSettingNames[i],
@@ -239,8 +327,27 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
                     }
                 }
             }
+            if (chkPref == mGameControllerCategory.findPreference("vibrate_input_devices")) {
+                System.putInt(getContentResolver(), Settings.System.VIBRATE_INPUT_DEVICES,
+                        chkPref.isChecked() ? 1 : 0);
+                return true;
+            }
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
+    }
+
+    private boolean hasOnlyOneLanguageInstance(String languageCode, String[] locales) {
+        int count = 0;
+        for (String localeCode : locales) {
+            if (localeCode.length() > 2
+                    && localeCode.startsWith(languageCode)) {
+                count++;
+                if (count > 1) {
+                    return false;
+                }
+            }
+        }
+        return count == 1;
     }
 
     private void saveInputMethodSelectorVisibility(String value) {
@@ -315,47 +422,118 @@ public class InputMethodAndLanguageSettings extends SettingsPreferenceFragment
         return pref;
     }
 
-    private void createImePreferenceHierarchy(PreferenceGroup root) {
-        final Preference hardKeyPref = findPreference("hard_keyboard");
-        if (mIsOnlyImeSettings) {
-            getPreferenceScreen().removeAll();
-            if (hardKeyPref != null && mHaveHardKeyboard) {
-                getPreferenceScreen().addPreference(hardKeyPref);
-            }
-            if (SHOW_INPUT_METHOD_SWITCHER_SETTINGS) {
-                getPreferenceScreen().addPreference(mShowInputMethodSelectorPref);
-            }
-            getPreferenceScreen().addPreference(root);
-        }
-        if (hardKeyPref != null) {
-            if (mHaveHardKeyboard) {
-                mHardKeyboardCategory = (PreferenceCategory) hardKeyPref;
-            } else {
-                getPreferenceScreen().removePreference(hardKeyPref);
-            }
-        }
-        root.removeAll();
-        mInputMethodPreferenceList.clear();
+    private void updateInputDevices() {
+        updateHardKeyboards();
+        updateGameControllers();
+    }
 
-        if (!mIsOnlyImeSettings) {
-            // Current IME selection
-            final PreferenceScreen currentIme = new PreferenceScreen(getActivity(), null);
-            currentIme.setKey(KEY_CURRENT_INPUT_METHOD);
-            currentIme.setTitle(getResources().getString(R.string.current_input_method));
-            root.addPreference(currentIme);
+    private void updateHardKeyboards() {
+        mHardKeyboardPreferenceList.clear();
+        if (getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY) {
+            final int[] devices = InputDevice.getDeviceIds();
+            for (int i = 0; i < devices.length; i++) {
+                InputDevice device = InputDevice.getDevice(devices[i]);
+                if (device != null
+                        && !device.isVirtual()
+                        && device.isFullKeyboard()) {
+                    final String inputDeviceDescriptor = device.getDescriptor();
+                    final String keyboardLayoutDescriptor =
+                            mIm.getCurrentKeyboardLayoutForInputDevice(inputDeviceDescriptor);
+                    final KeyboardLayout keyboardLayout = keyboardLayoutDescriptor != null ?
+                            mIm.getKeyboardLayout(keyboardLayoutDescriptor) : null;
+
+                    final PreferenceScreen pref = new PreferenceScreen(getActivity(), null);
+                    pref.setTitle(device.getName());
+                    if (keyboardLayout != null) {
+                        pref.setSummary(keyboardLayout.toString());
+                    } else {
+                        pref.setSummary(R.string.keyboard_layout_default_label);
+                    }
+                    pref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                        @Override
+                        public boolean onPreferenceClick(Preference preference) {
+                            showKeyboardLayoutDialog(inputDeviceDescriptor);
+                            return true;
+                        }
+                    });
+                    mHardKeyboardPreferenceList.add(pref);
+                }
+            }
         }
 
-        final int N = (mImis == null ? 0 : mImis.size());
-        for (int i = 0; i < N; ++i) {
-            final InputMethodInfo imi = mImis.get(i);
-            final InputMethodPreference pref = getInputMethodPreference(imi, N);
-            mInputMethodPreferenceList.add(pref);
-        }
+        if (!mHardKeyboardPreferenceList.isEmpty()) {
+            for (int i = mHardKeyboardCategory.getPreferenceCount(); i-- > 0; ) {
+                final Preference pref = mHardKeyboardCategory.getPreference(i);
+                if (pref.getOrder() < 1000) {
+                    mHardKeyboardCategory.removePreference(pref);
+                }
+            }
 
-        Collections.sort(mInputMethodPreferenceList);
-        for (int i = 0; i < N; ++i) {
-            root.addPreference(mInputMethodPreferenceList.get(i));
+            Collections.sort(mHardKeyboardPreferenceList);
+            final int count = mHardKeyboardPreferenceList.size();
+            for (int i = 0; i < count; i++) {
+                final Preference pref = mHardKeyboardPreferenceList.get(i);
+                pref.setOrder(i);
+                mHardKeyboardCategory.addPreference(pref);
+            }
+
+            getPreferenceScreen().addPreference(mHardKeyboardCategory);
+        } else {
+            getPreferenceScreen().removePreference(mHardKeyboardCategory);
         }
+    }
+
+    private void showKeyboardLayoutDialog(String inputDeviceDescriptor) {
+        KeyboardLayoutDialogFragment fragment =
+                new KeyboardLayoutDialogFragment(inputDeviceDescriptor);
+        fragment.setTargetFragment(this, 0);
+        fragment.show(getActivity().getFragmentManager(), "keyboardLayout");
+    }
+
+    @Override
+    public void onSetupKeyboardLayouts(String inputDeviceDescriptor) {
+        final Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.setClass(getActivity(), KeyboardLayoutPickerActivity.class);
+        intent.putExtra(KeyboardLayoutPickerFragment.EXTRA_INPUT_DEVICE_DESCRIPTOR,
+                inputDeviceDescriptor);
+        mIntentWaitingForResult = intent;
+        startActivityForResult(intent, 0);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (mIntentWaitingForResult != null) {
+            String inputDeviceDescriptor = mIntentWaitingForResult.getStringExtra(
+                    KeyboardLayoutPickerFragment.EXTRA_INPUT_DEVICE_DESCRIPTOR);
+            mIntentWaitingForResult = null;
+            showKeyboardLayoutDialog(inputDeviceDescriptor);
+        }
+    }
+
+    private void updateGameControllers() {
+        if (haveInputDeviceWithVibrator()) {
+            getPreferenceScreen().addPreference(mGameControllerCategory);
+
+            CheckBoxPreference chkPref = (CheckBoxPreference)
+                    mGameControllerCategory.findPreference("vibrate_input_devices");
+            chkPref.setChecked(System.getInt(getContentResolver(),
+                    Settings.System.VIBRATE_INPUT_DEVICES, 1) > 0);
+        } else {
+            getPreferenceScreen().removePreference(mGameControllerCategory);
+        }
+    }
+
+    private boolean haveInputDeviceWithVibrator() {
+        final int[] devices = InputDevice.getDeviceIds();
+        for (int i = 0; i < devices.length; i++) {
+            InputDevice device = InputDevice.getDevice(devices[i]);
+            if (device != null && !device.isVirtual() && device.getVibrator().hasVibrator()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private class SettingsObserver extends ContentObserver {

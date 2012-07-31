@@ -100,11 +100,6 @@ public class LocationSettings extends SettingsPreferenceFragment
             mUseLocation = useLocation;
         }
 
-        // Change the summary for wifi-only devices
-        if (Utils.isWifiOnly(getActivity())) {
-            mNetwork.setSummaryOn(R.string.location_neighborhood_level_wifi);
-        }
-
         return root;
     }
 
@@ -123,8 +118,9 @@ public class LocationSettings extends SettingsPreferenceFragment
                     updateLocationToggles();
                 }
             };
-            mContentQueryMap.addObserver(mSettingsObserver);
         }
+
+        mContentQueryMap.addObserver(mSettingsObserver);
     }
 
     @Override

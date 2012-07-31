@@ -17,6 +17,7 @@
 package com.android.settings.applications;
 
 import com.android.settings.R;
+import com.android.settings.Utils;
 import com.android.settings.applications.ApplicationsState.AppEntry;
 
 import android.app.Activity;
@@ -25,8 +26,11 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
+import android.app.INotificationManager;
 import android.app.admin.DevicePolicyManager;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -38,6 +42,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Resources;
 import android.hardware.usb.IUsbManager;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -49,13 +54,15 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.preference.PreferenceActivity;
+import android.text.SpannableString;
+import android.text.TextUtils;
 import android.text.format.Formatter;
+import android.text.style.BulletSpan;
 import android.util.Log;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-import android.content.ComponentName;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -87,8 +94,10 @@ public class InstalledAppDetails extends Fragment
 
     private PackageManager mPm;
     private IUsbManager mUsbManager;
+    private AppWidgetManager mAppWidgetManager;
     private DevicePolicyManager mDpm;
     private ApplicationsState mState;
+    private ApplicationsState.Session mSession;
     private ApplicationsState.AppEntry mAppEntry;
     private PackageInfo mPackageInfo;
     private CanBeOnSdCardChecker mCanBeOnSdCardChecker;
@@ -115,7 +124,8 @@ public class InstalledAppDetails extends Fragment
     private Button mForceStopButton;
     private Button mClearDataButton;
     private Button mMoveAppButton;
-    
+    private CompoundButton mNotificationSwitch;
+
     private PackageMoveObserver mPackageMoveObserver;
     
     private boolean mHaveSizes = false;
@@ -150,6 +160,7 @@ public class InstalledAppDetails extends Fragment
     private static final int DLG_FORCE_STOP = DLG_BASE + 5;
     private static final int DLG_MOVE_FAILED = DLG_BASE + 6;
     private static final int DLG_DISABLE = DLG_BASE + 7;
+    private static final int DLG_DISABLE_NOTIFICATIONS = DLG_BASE + 8;
     
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -268,6 +279,16 @@ public class InstalledAppDetails extends Fragment
         }
     }
 
+    private boolean isThisASystemPackage() {
+        try {
+            PackageInfo sys = mPm.getPackageInfo("android", PackageManager.GET_SIGNATURES);
+            return (mPackageInfo != null && mPackageInfo.signatures != null &&
+                    sys.signatures[0].equals(mPackageInfo.signatures[0]));
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
     private void initUninstallButtons() {
         mUpdatedSysApp = (mAppEntry.info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
         boolean enabled = true;
@@ -287,9 +308,7 @@ public class InstalledAppDetails extends Fragment
                         intent.addCategory(Intent.CATEGORY_HOME);
                         intent.setPackage(mAppEntry.info.packageName);
                         List<ResolveInfo> homes = mPm.queryIntentActivities(intent, 0);
-                        if ((homes != null && homes.size() > 0) ||
-                                (mPackageInfo != null && mPackageInfo.signatures != null &&
-                                        sys.signatures[0].equals(mPackageInfo.signatures[0]))) {
+                        if ((homes != null && homes.size() > 0) || isThisASystemPackage()) {
                             // Disable button for core system applications.
                             mUninstallButton.setText(R.string.disable_text);
                         } else if (mAppEntry.info.enabled) {
@@ -319,15 +338,35 @@ public class InstalledAppDetails extends Fragment
         }
     }
 
+    private void initNotificationButton() {
+        INotificationManager nm = INotificationManager.Stub.asInterface(
+                ServiceManager.getService(Context.NOTIFICATION_SERVICE));
+        boolean enabled = true; // default on
+        try {
+            enabled = nm.areNotificationsEnabledForPackage(mAppEntry.info.packageName);
+        } catch (android.os.RemoteException ex) {
+            // this does not bode well
+        }
+        mNotificationSwitch.setChecked(enabled);
+        if (isThisASystemPackage()) {
+            mNotificationSwitch.setEnabled(false);
+        } else {
+            mNotificationSwitch.setEnabled(true);
+            mNotificationSwitch.setOnCheckedChangeListener(this);
+        }
+    }
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
         
         mState = ApplicationsState.getInstance(getActivity().getApplication());
+        mSession = mState.newSession(this);
         mPm = getActivity().getPackageManager();
         IBinder b = ServiceManager.getService(Context.USB_SERVICE);
         mUsbManager = IUsbManager.Stub.asInterface(b);
+        mAppWidgetManager = AppWidgetManager.getInstance(getActivity());
         mDpm = (DevicePolicyManager)getActivity().getSystemService(Context.DEVICE_POLICY_SERVICE);
 
         mCanBeOnSdCardChecker = new CanBeOnSdCardChecker();
@@ -355,8 +394,8 @@ public class InstalledAppDetails extends Fragment
         
         // Initialize clear data and move install location buttons
         View data_buttons_panel = view.findViewById(R.id.data_buttons_panel);
-        mClearDataButton = (Button) data_buttons_panel.findViewById(R.id.left_button);
-        mMoveAppButton = (Button) data_buttons_panel.findViewById(R.id.right_button);
+        mClearDataButton = (Button) data_buttons_panel.findViewById(R.id.right_button);
+        mMoveAppButton = (Button) data_buttons_panel.findViewById(R.id.left_button);
         
         // Cache section
         mCacheSize = (TextView) view.findViewById(R.id.cache_size_text);
@@ -368,6 +407,8 @@ public class InstalledAppDetails extends Fragment
         mScreenCompatSection = view.findViewById(R.id.screen_compatibility_section);
         mAskCompatibilityCB = (CheckBox)view.findViewById(R.id.ask_compatibility_cb);
         mEnableCompatibilityCB = (CheckBox)view.findViewById(R.id.enable_compatibility_cb);
+        
+        mNotificationSwitch = (CompoundButton) view.findViewById(R.id.notification_switch);
 
         return view;
     }
@@ -397,7 +438,7 @@ public class InstalledAppDetails extends Fragment
     public void onResume() {
         super.onResume();
         
-        mState.resume(this);
+        mSession.resume();
         if (!refreshUi()) {
             setIntentAndFinish(true, true);
         }
@@ -406,7 +447,7 @@ public class InstalledAppDetails extends Fragment
     @Override
     public void onPause() {
         super.onPause();
-        mState.pause();
+        mSession.pause();
     }
 
     @Override
@@ -473,20 +514,55 @@ public class InstalledAppDetails extends Fragment
         // Intent list cannot be null. so pass empty list
         List<IntentFilter> intentList = new ArrayList<IntentFilter>();
         mPm.getPreferredActivities(intentList, prefActList, packageName);
-        if(localLOGV) Log.i(TAG, "Have "+prefActList.size()+" number of activities in prefered list");
+        if (localLOGV)
+            Log.i(TAG, "Have " + prefActList.size() + " number of activities in preferred list");
         boolean hasUsbDefaults = false;
         try {
             hasUsbDefaults = mUsbManager.hasDefaults(packageName);
         } catch (RemoteException e) {
             Log.e(TAG, "mUsbManager.hasDefaults", e);
         }
-        TextView autoLaunchView = (TextView)mRootView.findViewById(R.id.auto_launch);
-        if (prefActList.size() <= 0 && !hasUsbDefaults) {
-            // Disable clear activities button
-            autoLaunchView.setText(R.string.auto_launch_disable_text);
-            mActivitiesButton.setEnabled(false);
+        boolean hasBindAppWidgetPermission =
+                mAppWidgetManager.hasBindAppWidgetPermission(mAppEntry.info.packageName);
+
+        TextView autoLaunchTitleView = (TextView) mRootView.findViewById(R.id.auto_launch_title);
+        TextView autoLaunchView = (TextView) mRootView.findViewById(R.id.auto_launch);
+        boolean autoLaunchEnabled = prefActList.size() > 0 || hasUsbDefaults;
+        if (!autoLaunchEnabled && !hasBindAppWidgetPermission) {
+            resetLaunchDefaultsUi(autoLaunchTitleView, autoLaunchView);
         } else {
-            autoLaunchView.setText(R.string.auto_launch_enable_text);
+            boolean useBullets = hasBindAppWidgetPermission && autoLaunchEnabled;
+
+            if (hasBindAppWidgetPermission) {
+                autoLaunchTitleView.setText(R.string.auto_launch_label_generic);
+            } else {
+                autoLaunchTitleView.setText(R.string.auto_launch_label);
+            }
+
+            CharSequence text = null;
+            int bulletIndent = getResources()
+                    .getDimensionPixelSize(R.dimen.installed_app_details_bullet_offset);
+            if (autoLaunchEnabled) {
+                CharSequence autoLaunchEnableText = getText(R.string.auto_launch_enable_text);
+                SpannableString s = new SpannableString(autoLaunchEnableText);
+                if (useBullets) {
+                    s.setSpan(new BulletSpan(bulletIndent), 0, autoLaunchEnableText.length(), 0);
+                }
+                text = (text == null) ?
+                        TextUtils.concat(s, "\n") : TextUtils.concat(text, "\n", s, "\n");
+            }
+            if (hasBindAppWidgetPermission) {
+                CharSequence alwaysAllowBindAppWidgetsText =
+                        getText(R.string.always_allow_bind_appwidgets_text);
+                SpannableString s = new SpannableString(alwaysAllowBindAppWidgetsText);
+                if (useBullets) {
+                    s.setSpan(new BulletSpan(bulletIndent),
+                            0, alwaysAllowBindAppWidgetsText.length(), 0);
+                }
+                text = (text == null) ?
+                        TextUtils.concat(s, "\n") : TextUtils.concat(text, "\n", s, "\n");
+            }
+            autoLaunchView.setText(text);
             mActivitiesButton.setEnabled(true);
             mActivitiesButton.setOnClickListener(this);
         }
@@ -518,6 +594,46 @@ public class InstalledAppDetails extends Fragment
                     R.id.security_settings_list);
             securityList.removeAllViews();
             securityList.addView(asp.getPermissionsView());
+            // If this app is running under a shared user ID with other apps,
+            // update the description to explain this.
+            String[] packages = mPm.getPackagesForUid(mPackageInfo.applicationInfo.uid);
+            if (packages != null && packages.length > 1) {
+                ArrayList<CharSequence> pnames = new ArrayList<CharSequence>();
+                for (int i=0; i<packages.length; i++) {
+                    String pkg = packages[i];
+                    if (mPackageInfo.packageName.equals(pkg)) {
+                        continue;
+                    }
+                    try {
+                        ApplicationInfo ainfo = mPm.getApplicationInfo(pkg, 0);
+                        pnames.add(ainfo.loadLabel(mPm));
+                    } catch (PackageManager.NameNotFoundException e) {
+                    }
+                }
+                final int N = pnames.size();
+                if (N > 0) {
+                    final Resources res = getActivity().getResources();
+                    String appListStr;
+                    if (N == 1) {
+                        appListStr = pnames.get(0).toString();
+                    } else if (N == 2) {
+                        appListStr = res.getString(R.string.join_two_items, pnames.get(0),
+                                pnames.get(1));
+                    } else {
+                        appListStr = pnames.get(N-2).toString();
+                        for (int i=N-3; i>=0; i--) {
+                            appListStr = res.getString(i == 0 ? R.string.join_many_items_first
+                                    : R.string.join_many_items_middle, pnames.get(i), appListStr);
+                        }
+                        appListStr = res.getString(R.string.join_many_items_last,
+                                appListStr, pnames.get(N-1));
+                    }
+                    TextView descr = (TextView) mRootView.findViewById(
+                            R.id.security_settings_desc);
+                    descr.setText(res.getString(R.string.security_settings_desc_multi,
+                            mPackageInfo.applicationInfo.loadLabel(mPm), appListStr));
+                }
+            }
         } else {
             permsView.setVisibility(View.GONE);
         }
@@ -529,6 +645,13 @@ public class InstalledAppDetails extends Fragment
         return true;
     }
     
+    private void resetLaunchDefaultsUi(TextView title, TextView autoLaunchView) {
+        title.setText(R.string.auto_launch_label);
+        autoLaunchView.setText(R.string.auto_launch_disable_text);
+        // Disable clear activities button
+        mActivitiesButton.setEnabled(false);
+    }
+
     private void setIntentAndFinish(boolean finish, boolean appChanged) {
         if(localLOGV) Log.i(TAG, "appChanged="+appChanged);
         Intent intent = new Intent();
@@ -564,26 +687,28 @@ public class InstalledAppDetails extends Fragment
                 mLastExternalCodeSize = mAppEntry.externalCodeSize;
                 mExternalCodeSize.setText(getSizeStr(mAppEntry.externalCodeSize));
             }
-            if (mLastExternalDataSize != mAppEntry.externalDataSize) {
-                mLastExternalDataSize = mAppEntry.externalDataSize;
-                mExternalDataSize.setText(getSizeStr(mAppEntry.externalDataSize));
+            long nonCacheExtDataSize = mAppEntry.externalDataSize - mAppEntry.externalCacheSize;
+            if (mLastExternalDataSize != nonCacheExtDataSize) {
+                mLastExternalDataSize = nonCacheExtDataSize;
+                mExternalDataSize.setText(getSizeStr(nonCacheExtDataSize));
             }
-            if (mLastCacheSize != mAppEntry.cacheSize) {
-                mLastCacheSize = mAppEntry.cacheSize;
-                mCacheSize.setText(getSizeStr(mAppEntry.cacheSize));
+            long cacheSize = mAppEntry.cacheSize + mAppEntry.externalCacheSize;
+            if (mLastCacheSize != cacheSize) {
+                mLastCacheSize = cacheSize;
+                mCacheSize.setText(getSizeStr(cacheSize));
             }
             if (mLastTotalSize != mAppEntry.size) {
                 mLastTotalSize = mAppEntry.size;
                 mTotalSize.setText(getSizeStr(mAppEntry.size));
             }
             
-            if (mAppEntry.dataSize <= 0 || !mCanClearData) {
+            if ((mAppEntry.dataSize+nonCacheExtDataSize) <= 0 || !mCanClearData) {
                 mClearDataButton.setEnabled(false);
             } else {
                 mClearDataButton.setEnabled(true);
                 mClearDataButton.setOnClickListener(this);
             }
-            if (mAppEntry.cacheSize <= 0) {
+            if (cacheSize <= 0) {
                 mClearCacheButton.setEnabled(false);
             } else {
                 mClearCacheButton.setEnabled(true);
@@ -614,6 +739,7 @@ public class InstalledAppDetails extends Fragment
             initUninstallButtons();
             initDataButtons();
             initMoveButton();
+            initNotificationButton();
         } else {
             mMoveAppButton.setText(R.string.moving);
             mMoveAppButton.setEnabled(false);
@@ -780,6 +906,26 @@ public class InstalledAppDetails extends Fragment
                     })
                     .setNegativeButton(R.string.dlg_cancel, null)
                     .create();
+                case DLG_DISABLE_NOTIFICATIONS:
+                    return new AlertDialog.Builder(getActivity())
+                    .setTitle(getActivity().getText(R.string.app_disable_notifications_dlg_title))
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setMessage(getActivity().getText(R.string.app_disable_notifications_dlg_text))
+                    .setPositiveButton(R.string.dlg_ok,
+                        new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Disable the package's notifications
+                            getOwner().setNotificationsEnabled(false);
+                        }
+                    })
+                    .setNegativeButton(R.string.dlg_cancel,
+                        new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Re-enable the checkbox
+                            getOwner().mNotificationSwitch.setChecked(true);
+                        }
+                    })
+                    .create();
             }
             throw new IllegalArgumentException("unknown id " + id);
         }
@@ -834,7 +980,7 @@ public class InstalledAppDetails extends Fragment
                     Activity.RESULT_CANCELED, null, null);
         }
     }
-    
+
     static class DisableChanger extends AsyncTask<Object, Object, Object> {
         final PackageManager mPm;
         final WeakReference<InstalledAppDetails> mActivity;
@@ -852,6 +998,18 @@ public class InstalledAppDetails extends Fragment
         protected Object doInBackground(Object... params) {
             mPm.setApplicationEnabledSetting(mInfo.packageName, mState, 0);
             return null;
+        }
+    }
+
+    private void setNotificationsEnabled(boolean enabled) {
+        String packageName = mAppEntry.info.packageName;
+        INotificationManager nm = INotificationManager.Stub.asInterface(
+                ServiceManager.getService(Context.NOTIFICATION_SERVICE));
+        try {
+            final boolean enable = mNotificationSwitch.isChecked();
+            nm.setNotificationsEnabledForPackage(packageName, enabled);
+        } catch (android.os.RemoteException ex) {
+            mNotificationSwitch.setChecked(!enabled); // revert
         }
     }
 
@@ -884,13 +1042,19 @@ public class InstalledAppDetails extends Fragment
             } catch (RemoteException e) {
                 Log.e(TAG, "mUsbManager.clearDefaults", e);
             }
-            mActivitiesButton.setEnabled(false);
+            mAppWidgetManager.setBindAppWidgetPermission(packageName, false);
+            TextView autoLaunchTitleView =
+                    (TextView) mRootView.findViewById(R.id.auto_launch_title);
+            TextView autoLaunchView = (TextView) mRootView.findViewById(R.id.auto_launch);
+            resetLaunchDefaultsUi(autoLaunchTitleView, autoLaunchView);
         } else if(v == mClearDataButton) {
             if (mAppEntry.info.manageSpaceActivityName != null) {
-                Intent intent = new Intent(Intent.ACTION_DEFAULT);
-                intent.setClassName(mAppEntry.info.packageName,
-                        mAppEntry.info.manageSpaceActivityName);
-                startActivityForResult(intent, -1);
+                if (!Utils.isMonkeyRunning()) {
+                    Intent intent = new Intent(Intent.ACTION_DEFAULT);
+                    intent.setClassName(mAppEntry.info.packageName,
+                            mAppEntry.info.manageSpaceActivityName);
+                    startActivityForResult(intent, -1);
+                }
             } else {
                 showDialogInner(DLG_CLEAR_DATA, 0);
             }
@@ -925,6 +1089,12 @@ public class InstalledAppDetails extends Fragment
         } else if (buttonView == mEnableCompatibilityCB) {
             am.setPackageScreenCompatMode(packageName, isChecked ?
                     ActivityManager.COMPAT_MODE_ENABLED : ActivityManager.COMPAT_MODE_DISABLED);
+        } else if (buttonView == mNotificationSwitch) {
+            if (!isChecked) {
+                showDialogInner(DLG_DISABLE_NOTIFICATIONS, 0);
+            } else {
+                setNotificationsEnabled(true);
+            }
         }
     }
 }

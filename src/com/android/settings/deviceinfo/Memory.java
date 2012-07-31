@@ -44,14 +44,13 @@ import android.widget.Toast;
 
 import com.android.settings.R;
 import com.android.settings.SettingsPreferenceFragment;
+import com.android.settings.Utils;
 
 public class Memory extends SettingsPreferenceFragment {
     private static final String TAG = "MemorySettings";
 
     private static final int DLG_CONFIRM_UNMOUNT = 1;
     private static final int DLG_ERROR_UNMOUNT = 2;
-
-    private static final int MENU_ID_USB = Menu.FIRST;
 
     private Resources mResources;
 
@@ -92,9 +91,6 @@ public class Memory extends SettingsPreferenceFragment {
         }
 
         StorageVolume[] storageVolumes = mStorageManager.getVolumeList();
-        // mass storage is enabled if primary volume supports it
-        boolean massStorageEnabled = (storageVolumes.length > 0
-                && storageVolumes[0].allowMassStorage());
         int length = storageVolumes.length;
         mStorageVolumePreferenceCategories = new StorageVolumePreferenceCategory[length];
         for (int i = 0; i < length; i++) {
@@ -106,8 +102,13 @@ public class Memory extends SettingsPreferenceFragment {
             mStorageVolumePreferenceCategories[i].init();
         }
 
-        // only show options menu if we are not using the legacy USB mass storage support
-        setHasOptionsMenu(!massStorageEnabled);
+        setHasOptionsMenu(true);
+    }
+
+    private boolean isMassStorageEnabled() {
+        // mass storage is enabled if primary volume supports it
+        final StorageVolume[] storageVolumes = mStorageManager.getVolumeList();
+        return (storageVolumes.length > 0 && storageVolumes[0].allowMassStorage());
     }
 
     @Override
@@ -163,15 +164,19 @@ public class Memory extends SettingsPreferenceFragment {
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        menu.add(Menu.NONE, MENU_ID_USB, 0, R.string.storage_menu_usb)
-                //.setIcon(com.android.internal.R.drawable.stat_sys_data_usb)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        inflater.inflate(R.menu.storage, menu);
+    }
+
+    @Override
+    public void onPrepareOptionsMenu(Menu menu) {
+        final MenuItem usb = menu.findItem(R.id.storage_usb);
+        usb.setVisible(!isMassStorageEnabled());
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case MENU_ID_USB:
+            case R.id.storage_usb:
                 if (getActivity() instanceof PreferenceActivity) {
                     ((PreferenceActivity) getActivity()).startPreferencePanel(
                             UsbSettings.class.getCanonicalName(),
@@ -204,7 +209,10 @@ public class Memory extends SettingsPreferenceFragment {
             StorageVolumePreferenceCategory svpc = mStorageVolumePreferenceCategories[i];
             Intent intent = svpc.intentForClick(preference);
             if (intent != null) {
-                startActivity(intent);
+                // Don't go across app boundary if monkey is running
+                if (!Utils.isMonkeyRunning()) {
+                    startActivity(intent);
+                }
                 return true;
             }
 

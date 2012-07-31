@@ -82,8 +82,32 @@
     <style name="Theme.CreateShortCut" parent="android:Theme.Holo.DialogWhenLarge">
     </style>
 
+    <style name="setup_wizard_theme" parent="android:Theme.Holo.NoActionBar">
+        <item name="android:windowSoftInputMode">adjustPan</item>
+    </style>
+
+    <!-- We'd like to have this as 16dip hight including paddingTop/paddingBottom to
+         be consistent with ProgressBar -->
+    <style name="TopDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/divider_height</item>
+        <item name="android:background">@color/setup_divider_color</item>
+        <item name="android:focusable">false</item>
+        <item name="android:clickable">false</item>
+        <item name="android:layout_marginTop">@dimen/divider_margin_top</item>
+        <item name="android:layout_marginBottom">@dimen/divider_margin_bottom</item>
+    </style>
+
+    <style name="SetupTitle">
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:textSize">@dimen/setup_title_size</item>
+        <item name="android:textColor">@color/title_color</item>
+        <item name="android:clickable">false</item>
+        <item name="android:longClickable">false</item>
+    </style>
+
     <style name="wifi_item">
-        <item name="android:layout_width">200dip</item>
+        <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">8dip</item>
         <item name="android:layout_marginLeft">16dip</item>
@@ -158,37 +182,12 @@
         <item name="android:widgetLayout">@layout/preference_inputmethod_widget</item>
     </style>
 
-    <style name="AccessibilityTutorialButton">
-        <item name="android:layout_width">150dip</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_margin">5dip</item>
-        <item name="android:drawablePadding">3dip</item>
+    <style name="TextAppearance.Switch" parent="@*android:style/TextAppearance.Holo.Widget.Switch">
+        <item name="android:textAllCaps">true</item>
     </style>
 
-    <style name="AccessibilityTutorialDivider">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">2dip</item>
-        <item name="android:gravity">fill_horizontal</item>
-        <item name="android:background">@color/divider_color</item>
-    </style>
-
-    <style name="AccessibilityTutorialTitle" parent="@android:style/TextAppearance.Large">
-        <item name="android:textColor">@color/title_color</item>
-    </style>
-
-    <style name="AccessibilityTutorialBodyTextPrimary" parent="@android:style/TextAppearance.Small">
-    </style>
-
-    <style name="AccessibilityTutorialIcon">
-        <item name="android:layout_width">96dip</item>
-        <item name="android:layout_height">96dip</item>
-        <item name="android:layout_gravity">center</item>
-        <item name="android:gravity">center_horizontal</item>
-        <item name="android:singleLine">true</item>
-        <item name="android:ellipsize">marquee</item>
-        <item name="android:textSize">12dip</item>
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
-        <item name="android:shadowRadius">2.0</item>
-        <item name="android:shadowColor">#B0000000</item>
+    <style name="TextAppearance.PagerTabs" parent="@android:style/TextAppearance.DeviceDefault.Small">
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">bold</item>
     </style>
 </resources>

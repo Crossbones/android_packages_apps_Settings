@@ -90,6 +90,8 @@
     <item msgid="7979680559596111948">"Inakatisha muunganisho..."</item>
     <item msgid="1634960474403853625">"Muunganisho Umekatika"</item>
     <item msgid="746097431216080650">"Haijafanikiwa"</item>
+    <item msgid="6367044185730295334">"Imezuiwa"</item>
+    <item msgid="503942654197908005">"Inaepuka kwa muda muunganisho mbovu"</item>
   </string-array>
   <string-array name="wifi_status_with_ssid">
     <item msgid="7714855332363650812"></item>
@@ -102,6 +104,8 @@
     <item msgid="7698638434317271902">"inakatisha muunganisho kutoka <xliff:g id="NETWORK_NAME">%1$s</xliff:g>…"</item>
     <item msgid="197508606402264311">"Muunganisho Umekatika"</item>
     <item msgid="8578370891960825148">"Haijafanikiwa"</item>
+    <item msgid="5660739516542454527">"Imezuiwa"</item>
+    <item msgid="1805837518286731242">"Inaepuka kwa muda muunganisho mbovu"</item>
   </string-array>
     <!-- no translation found for wifi_security:0 (8491993170197127709) -->
     <!-- no translation found for wifi_security:1 (6524315248437318854) -->
@@ -114,6 +118,7 @@
     <item msgid="1160193392455075561">"PEAP"</item>
     <item msgid="7981731051382306293">"TLS"</item>
     <item msgid="2892994535305020162">"TTLS"</item>
+    <item msgid="435667726254379514">"PWD"</item>
   </string-array>
   <string-array name="wifi_p2p_wps_setup">
     <item msgid="5085064298144493867">"Kichupo cha kusukuma"</item>
@@ -163,6 +168,7 @@
     <item msgid="8615575908717909498">"PEAP"</item>
     <item msgid="8667872640594311615">"TLS"</item>
     <item msgid="7182812872984827322">"TTLS"</item>
+    <item msgid="2318274046749286642">"PWD"</item>
   </string-array>
   <string-array name="wifi_phase2_entries">
     <item msgid="1818786254010764570">"Hamna"</item>
@@ -170,12 +176,6 @@
     <item msgid="1524112260493662517">"MSCHAP"</item>
     <item msgid="5923246669412752932">"MSCHAPV2"</item>
     <item msgid="8651992560135239389">"GTC"</item>
-  </string-array>
-  <string-array name="wifi_network_setup">
-    <item msgid="3318069057130819160">"Imezimwa"</item>
-    <item msgid="3564693183575724416">"Kichupo cha kusukuma"</item>
-    <item msgid="7468724146672456026">"PIN kutoka sehemu ya ufikivu"</item>
-    <item msgid="7364462169350112617">"PIN kutoka kwa kifaa hiki"</item>
   </string-array>
   <string-array name="wifi_ip_settings">
     <item msgid="3906714200993111074">"DHCP"</item>
@@ -211,11 +211,6 @@
     <item msgid="3738430123799803530">"Kadi ya SD inayoondolewa"</item>
     <item msgid="4498124044785815005">"Wacha mfumo uamue"</item>
   </string-array>
-  <string-array name="silent_mode_entries">
-    <item msgid="783505504936446770">"Zima"</item>
-    <item msgid="4804571292609523335">"Mtetemo"</item>
-    <item msgid="595707141547423573">"Nyamazisha"</item>
-  </string-array>
   <string-array name="long_press_timeout_selector_titles">
     <item msgid="3511504869290423954">"Fupi"</item>
     <item msgid="2560532955514699713">"Wastani"</item>
@@ -248,6 +243,15 @@
     <item msgid="3289156759925947169">"Skeli 2x ya haiwani"</item>
     <item msgid="7705857441213621835">"Skeli 5x ya haiwani"</item>
     <item msgid="6660750935954853365">"Skeli ya 10x ya uhuishaji"</item>
+  </string-array>
+  <string-array name="animator_duration_scale_entries">
+    <item msgid="6039901060648228241">"Uhuishaji umezimwa"</item>
+    <item msgid="1138649021950863198">"Mizani .5x ya uhuishaji"</item>
+    <item msgid="4394388961370833040">"Mizani 1x ya uhuishaji"</item>
+    <item msgid="8125427921655194973">"Mizani 1.5x ya uhuishaji"</item>
+    <item msgid="3334024790739189573">"Mizani 2x ya uhuishaji"</item>
+    <item msgid="3170120558236848008">"Mizani 5x ya uhuishaji"</item>
+    <item msgid="1069584980746680398">"Mizani 10x ya uhuishaji"</item>
   </string-array>
   <string-array name="app_process_limit_entries">
     <item msgid="3401625457385943795">"Kiwango cha wastani"</item>

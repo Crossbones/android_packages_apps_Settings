@@ -439,7 +439,6 @@ public class RunningServiceDetails extends Fragment
         
         mAllDetails = (ViewGroup)view.findViewById(R.id.all_details);
         mSnippet = (ViewGroup)view.findViewById(R.id.snippet);
-        mSnippet.setBackgroundResource(com.android.internal.R.drawable.title_bar_medium);
         mSnippet.setPadding(0, mSnippet.getPaddingTop(), 0, mSnippet.getPaddingBottom());
         mSnippetViewHolder = new RunningProcessesView.ViewHolder(mSnippet);
         
@@ -554,6 +553,7 @@ public class RunningServiceDetails extends Fragment
 
     @Override
     public void onRefreshUi(int what) {
+        if (getActivity() == null) return;
         switch (what) {
             case REFRESH_TIME:
                 updateTimes();

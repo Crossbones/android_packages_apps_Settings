@@ -73,6 +73,16 @@ public class ApplicationsState {
         long dataSize;
         long externalCodeSize;
         long externalDataSize;
+
+        // This is the part of externalDataSize that is in the cache
+        // section of external storage.  Note that we don't just combine
+        // this with cacheSize because currently the platform can't
+        // automatically trim this data when needed, so it is something
+        // the user may need to manage.  The externalDataSize also includes
+        // this value, since what this is here is really the part of
+        // externalDataSize that we can just consider to be "cache" files
+        // for purposes of cleaning them up in the app details UI.
+        long externalCacheSize;
     }
     
     public static class AppEntry extends SizeInfo {
@@ -227,24 +237,21 @@ public class ApplicationsState {
     PackageIntentReceiver mPackageIntentReceiver;
 
     boolean mResumed;
-    Callbacks mCurCallbacks;
 
-    // Information about all applications.  Synchronize on mAppEntries
+    // Information about all applications.  Synchronize on mEntriesMap
     // to protect access to these.
+    final ArrayList<Session> mSessions = new ArrayList<Session>();
+    final ArrayList<Session> mRebuildingSessions = new ArrayList<Session>();
     final InterestingConfigChanges mInterestingConfigChanges = new InterestingConfigChanges();
     final HashMap<String, AppEntry> mEntriesMap = new HashMap<String, AppEntry>();
     final ArrayList<AppEntry> mAppEntries = new ArrayList<AppEntry>();
     List<ApplicationInfo> mApplications = new ArrayList<ApplicationInfo>();
     long mCurId = 1;
     String mCurComputingSizePkg;
+    boolean mSessionsChanged;
 
-    // Rebuilding of app list.  Synchronized on mRebuildSync.
-    final Object mRebuildSync = new Object();
-    boolean mRebuildRequested;
-    boolean mRebuildAsync;
-    AppFilter mRebuildFilter;
-    Comparator<AppEntry> mRebuildComparator;
-    ArrayList<AppEntry> mRebuildResult;
+    // Temporary for dispatching session callbacks.  Only touched by main thread.
+    final ArrayList<Session> mActiveSessions = new ArrayList<Session>();
 
     /**
      * Receives notifications when applications are added/removed.
@@ -261,6 +268,9 @@ public class ApplicationsState {
              sdFilter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
              sdFilter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE);
              mContext.registerReceiver(this, sdFilter);
+         }
+         void unregisterReceiver() {
+             mContext.unregisterReceiver(this);
          }
          @Override
          public void onReceive(Context context, Intent intent) {
@@ -300,6 +310,21 @@ public class ApplicationsState {
          }
     }
 
+    void rebuildActiveSessions() {
+        synchronized (mEntriesMap) {
+            if (!mSessionsChanged) {
+                return;
+            }
+            mActiveSessions.clear();
+            for (int i=0; i<mSessions.size(); i++) {
+                Session s = mSessions.get(i);
+                if (s.mResumed) {
+                    mActiveSessions.add(s);
+                }
+            }
+        }
+    }
+
     class MainHandler extends Handler {
         static final int MSG_REBUILD_COMPLETE = 1;
         static final int MSG_PACKAGE_LIST_CHANGED = 2;
@@ -310,35 +335,39 @@ public class ApplicationsState {
 
         @Override
         public void handleMessage(Message msg) {
+            rebuildActiveSessions();
             switch (msg.what) {
                 case MSG_REBUILD_COMPLETE: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onRebuildComplete((ArrayList<AppEntry>)msg.obj);
+                    Session s = (Session)msg.obj;
+                    if (mActiveSessions.contains(s)) {
+                        s.mCallbacks.onRebuildComplete(s.mLastAppList);
                     }
                 } break;
                 case MSG_PACKAGE_LIST_CHANGED: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onPackageListChanged();
+                    for (int i=0; i<mActiveSessions.size(); i++) {
+                        mActiveSessions.get(i).mCallbacks.onPackageListChanged();
                     }
                 } break;
                 case MSG_PACKAGE_ICON_CHANGED: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onPackageIconChanged();
+                    for (int i=0; i<mActiveSessions.size(); i++) {
+                        mActiveSessions.get(i).mCallbacks.onPackageIconChanged();
                     }
                 } break;
                 case MSG_PACKAGE_SIZE_CHANGED: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onPackageSizeChanged((String)msg.obj);
+                    for (int i=0; i<mActiveSessions.size(); i++) {
+                        mActiveSessions.get(i).mCallbacks.onPackageSizeChanged(
+                                (String)msg.obj);
                     }
                 } break;
                 case MSG_ALL_SIZES_COMPUTED: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onAllSizesComputed();
+                    for (int i=0; i<mActiveSessions.size(); i++) {
+                        mActiveSessions.get(i).mCallbacks.onAllSizesComputed();
                     }
                 } break;
                 case MSG_RUNNING_STATE_CHANGED: {
-                    if (mCurCallbacks != null) {
-                        mCurCallbacks.onRunningStateChanged(msg.arg1 != 0);
+                    for (int i=0; i<mActiveSessions.size(); i++) {
+                        mActiveSessions.get(i).mCallbacks.onRunningStateChanged(
+                                msg.arg1 != 0);
                     }
                 } break;
             }
@@ -391,157 +420,226 @@ public class ApplicationsState {
         }
     }
 
-    void resume(Callbacks callbacks) {
-        if (DEBUG_LOCKING) Log.v(TAG, "resume about to acquire lock...");
-        synchronized (mEntriesMap) {
-            mCurCallbacks = callbacks;
-            mResumed = true;
-            if (mPackageIntentReceiver == null) {
-                mPackageIntentReceiver = new PackageIntentReceiver();
-                mPackageIntentReceiver.registerReceiver();
-            }
-            mApplications = mPm.getInstalledApplications(
-                    PackageManager.GET_UNINSTALLED_PACKAGES |
-                    PackageManager.GET_DISABLED_COMPONENTS);
-            if (mApplications == null) {
-                mApplications = new ArrayList<ApplicationInfo>();
-            }
+    public class Session {
+        final Callbacks mCallbacks;
+        boolean mResumed;
 
-            if (mInterestingConfigChanges.applyNewConfig(mContext.getResources())) {
-                // If an interesting part of the configuration has changed, we
-                // should completely reload the app entries.
-                mEntriesMap.clear();
-                mAppEntries.clear();
-            } else {
-                for (int i=0; i<mAppEntries.size(); i++) {
-                    mAppEntries.get(i).sizeStale = true;
-                }
-            }
+        // Rebuilding of app list.  Synchronized on mRebuildSync.
+        final Object mRebuildSync = new Object();
+        boolean mRebuildRequested;
+        boolean mRebuildAsync;
+        AppFilter mRebuildFilter;
+        Comparator<AppEntry> mRebuildComparator;
+        ArrayList<AppEntry> mRebuildResult;
+        ArrayList<AppEntry> mLastAppList;
 
-            for (int i=0; i<mApplications.size(); i++) {
-                final ApplicationInfo info = mApplications.get(i);
-                // Need to trim out any applications that are disabled by
-                // something different than the user.
-                if (!info.enabled && info.enabledSetting
-                        != PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
-                    mApplications.remove(i);
-                    i--;
-                    continue;
+        Session(Callbacks callbacks) {
+            mCallbacks = callbacks;
+        }
+
+        public void resume() {
+            if (DEBUG_LOCKING) Log.v(TAG, "resume about to acquire lock...");
+            synchronized (mEntriesMap) {
+                if (!mResumed) {
+                    mResumed = true;
+                    mSessionsChanged = true;
+                    doResumeIfNeededLocked();
                 }
-                final AppEntry entry = mEntriesMap.get(info.packageName);
-                if (entry != null) {
-                    entry.info = info;
-                }
-            }
-            mCurComputingSizePkg = null;
-            if (!mBackgroundHandler.hasMessages(BackgroundHandler.MSG_LOAD_ENTRIES)) {
-                mBackgroundHandler.sendEmptyMessage(BackgroundHandler.MSG_LOAD_ENTRIES);
             }
             if (DEBUG_LOCKING) Log.v(TAG, "...resume releasing lock");
         }
-    }
 
-    void pause() {
-        if (DEBUG_LOCKING) Log.v(TAG, "pause about to acquire lock...");
-        synchronized (mEntriesMap) {
-            mCurCallbacks = null;
-            mResumed = false;
-            if (DEBUG_LOCKING) Log.v(TAG, "...pause releasing lock");
-        }
-    }
-
-    // Creates a new list of app entries with the given filter and comparator.
-    ArrayList<AppEntry> rebuild(AppFilter filter, Comparator<AppEntry> comparator) {
-        synchronized (mRebuildSync) {
-            mRebuildRequested = true;
-            mRebuildAsync = false;
-            mRebuildFilter = filter;
-            mRebuildComparator = comparator;
-            mRebuildResult = null;
-            if (!mBackgroundHandler.hasMessages(BackgroundHandler.MSG_REBUILD_LIST)) {
-                mBackgroundHandler.sendEmptyMessage(BackgroundHandler.MSG_REBUILD_LIST);
-            }
-
-            // We will wait for .25s for the list to be built.
-            long waitend = SystemClock.uptimeMillis()+250;
-
-            while (mRebuildResult == null) {
-                long now = SystemClock.uptimeMillis();
-                if (now >= waitend) {
-                    break;
+        public void pause() {
+            if (DEBUG_LOCKING) Log.v(TAG, "pause about to acquire lock...");
+            synchronized (mEntriesMap) {
+                if (mResumed) {
+                    mResumed = false;
+                    mSessionsChanged = true;
+                    mBackgroundHandler.removeMessages(BackgroundHandler.MSG_REBUILD_LIST, this);
+                    doPauseIfNeededLocked();
                 }
-                try {
-                    mRebuildSync.wait(waitend - now);
-                } catch (InterruptedException e) {
-                }
+                if (DEBUG_LOCKING) Log.v(TAG, "...pause releasing lock");
             }
-
-            mRebuildAsync = true;
-
-            return mRebuildResult;
-        }
-    }
-
-    void handleRebuildList() {
-        AppFilter filter;
-        Comparator<AppEntry> comparator;
-        synchronized (mRebuildSync) {
-            if (!mRebuildRequested) {
-                return;
-            }
-
-            filter = mRebuildFilter;
-            comparator = mRebuildComparator;
-            mRebuildRequested = false;
-            mRebuildFilter = null;
-            mRebuildComparator = null;
         }
 
-        Process.setThreadPriority(Process.THREAD_PRIORITY_FOREGROUND);
-
-        if (filter != null) {
-            filter.init();
-        }
-        
-        List<ApplicationInfo> apps;
-        synchronized (mEntriesMap) {
-            apps = new ArrayList<ApplicationInfo>(mApplications);
-        }
-
-        ArrayList<AppEntry> filteredApps = new ArrayList<AppEntry>();
-        if (DEBUG) Log.i(TAG, "Rebuilding...");
-        for (int i=0; i<apps.size(); i++) {
-            ApplicationInfo info = apps.get(i);
-            if (filter == null || filter.filterApp(info)) {
+        // Creates a new list of app entries with the given filter and comparator.
+        ArrayList<AppEntry> rebuild(AppFilter filter, Comparator<AppEntry> comparator) {
+            synchronized (mRebuildSync) {
                 synchronized (mEntriesMap) {
-                    if (DEBUG_LOCKING) Log.v(TAG, "rebuild acquired lock");
-                    AppEntry entry = getEntryLocked(info);
-                    entry.ensureLabel(mContext);
-                    if (DEBUG) Log.i(TAG, "Using " + info.packageName + ": " + entry);
-                    filteredApps.add(entry);
-                    if (DEBUG_LOCKING) Log.v(TAG, "rebuild releasing lock");
+                    mRebuildingSessions.add(this);
+                    mRebuildRequested = true;
+                    mRebuildAsync = false;
+                    mRebuildFilter = filter;
+                    mRebuildComparator = comparator;
+                    mRebuildResult = null;
+                    if (!mBackgroundHandler.hasMessages(BackgroundHandler.MSG_REBUILD_LIST)) {
+                        Message msg = mBackgroundHandler.obtainMessage(
+                                BackgroundHandler.MSG_REBUILD_LIST);
+                        mBackgroundHandler.sendMessage(msg);
+                    }
                 }
+
+                // We will wait for .25s for the list to be built.
+                long waitend = SystemClock.uptimeMillis()+250;
+
+                while (mRebuildResult == null) {
+                    long now = SystemClock.uptimeMillis();
+                    if (now >= waitend) {
+                        break;
+                    }
+                    try {
+                        mRebuildSync.wait(waitend - now);
+                    } catch (InterruptedException e) {
+                    }
+                }
+
+                mRebuildAsync = true;
+
+                return mRebuildResult;
             }
         }
 
-        Collections.sort(filteredApps, comparator);
+        void handleRebuildList() {
+            AppFilter filter;
+            Comparator<AppEntry> comparator;
+            synchronized (mRebuildSync) {
+                if (!mRebuildRequested) {
+                    return;
+                }
 
-        synchronized (mRebuildSync) {
-            if (!mRebuildRequested) {
-                if (!mRebuildAsync) {
-                    mRebuildResult = filteredApps;
-                    mRebuildSync.notifyAll();
-                } else {
-                    if (!mMainHandler.hasMessages(MainHandler.MSG_REBUILD_COMPLETE)) {
-                        Message msg = mMainHandler.obtainMessage(
-                                MainHandler.MSG_REBUILD_COMPLETE, filteredApps);
-                        mMainHandler.sendMessage(msg);
+                filter = mRebuildFilter;
+                comparator = mRebuildComparator;
+                mRebuildRequested = false;
+                mRebuildFilter = null;
+                mRebuildComparator = null;
+            }
+
+            Process.setThreadPriority(Process.THREAD_PRIORITY_FOREGROUND);
+
+            if (filter != null) {
+                filter.init();
+            }
+            
+            List<ApplicationInfo> apps;
+            synchronized (mEntriesMap) {
+                apps = new ArrayList<ApplicationInfo>(mApplications);
+            }
+
+            ArrayList<AppEntry> filteredApps = new ArrayList<AppEntry>();
+            if (DEBUG) Log.i(TAG, "Rebuilding...");
+            for (int i=0; i<apps.size(); i++) {
+                ApplicationInfo info = apps.get(i);
+                if (filter == null || filter.filterApp(info)) {
+                    synchronized (mEntriesMap) {
+                        if (DEBUG_LOCKING) Log.v(TAG, "rebuild acquired lock");
+                        AppEntry entry = getEntryLocked(info);
+                        entry.ensureLabel(mContext);
+                        if (DEBUG) Log.i(TAG, "Using " + info.packageName + ": " + entry);
+                        filteredApps.add(entry);
+                        if (DEBUG_LOCKING) Log.v(TAG, "rebuild releasing lock");
                     }
                 }
             }
+
+            Collections.sort(filteredApps, comparator);
+
+            synchronized (mRebuildSync) {
+                if (!mRebuildRequested) {
+                    mLastAppList = filteredApps;
+                    if (!mRebuildAsync) {
+                        mRebuildResult = filteredApps;
+                        mRebuildSync.notifyAll();
+                    } else {
+                        if (!mMainHandler.hasMessages(MainHandler.MSG_REBUILD_COMPLETE, this)) {
+                            Message msg = mMainHandler.obtainMessage(
+                                    MainHandler.MSG_REBUILD_COMPLETE, this);
+                            mMainHandler.sendMessage(msg);
+                        }
+                    }
+                }
+            }
+
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
         }
 
-        Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        public void release() {
+            pause();
+            synchronized (mEntriesMap) {
+                mSessions.remove(this);
+            }
+        }
+    }
+
+    public Session newSession(Callbacks callbacks) {
+        Session s = new Session(callbacks);
+        synchronized (mEntriesMap) {
+            mSessions.add(s);
+        }
+        return s;
+    }
+
+    void doResumeIfNeededLocked() {
+        if (mResumed) {
+            return;
+        }
+        mResumed = true;
+        if (mPackageIntentReceiver == null) {
+            mPackageIntentReceiver = new PackageIntentReceiver();
+            mPackageIntentReceiver.registerReceiver();
+        }
+        mApplications = mPm.getInstalledApplications(
+                PackageManager.GET_UNINSTALLED_PACKAGES |
+                PackageManager.GET_DISABLED_COMPONENTS);
+        if (mApplications == null) {
+            mApplications = new ArrayList<ApplicationInfo>();
+        }
+
+        if (mInterestingConfigChanges.applyNewConfig(mContext.getResources())) {
+            // If an interesting part of the configuration has changed, we
+            // should completely reload the app entries.
+            mEntriesMap.clear();
+            mAppEntries.clear();
+        } else {
+            for (int i=0; i<mAppEntries.size(); i++) {
+                mAppEntries.get(i).sizeStale = true;
+            }
+        }
+
+        for (int i=0; i<mApplications.size(); i++) {
+            final ApplicationInfo info = mApplications.get(i);
+            // Need to trim out any applications that are disabled by
+            // something different than the user.
+            if (!info.enabled && info.enabledSetting
+                    != PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
+                mApplications.remove(i);
+                i--;
+                continue;
+            }
+            final AppEntry entry = mEntriesMap.get(info.packageName);
+            if (entry != null) {
+                entry.info = info;
+            }
+        }
+        mCurComputingSizePkg = null;
+        if (!mBackgroundHandler.hasMessages(BackgroundHandler.MSG_LOAD_ENTRIES)) {
+            mBackgroundHandler.sendEmptyMessage(BackgroundHandler.MSG_LOAD_ENTRIES);
+        }
+    }
+
+    void doPauseIfNeededLocked() {
+        if (!mResumed) {
+            return;
+        }
+        for (int i=0; i<mSessions.size(); i++) {
+            if (mSessions.get(i).mResumed) {
+                return;
+            }
+        }
+        mResumed = false;
+        if (mPackageIntentReceiver != null) {
+            mPackageIntentReceiver.unregisterReceiver();
+            mPackageIntentReceiver = null;
+        }
     }
 
     AppEntry getEntry(String packageName) {
@@ -732,13 +830,15 @@ public class ApplicationsState {
                                     entry.codeSize != stats.codeSize ||
                                     entry.dataSize != stats.dataSize ||
                                     entry.externalCodeSize != externalCodeSize ||
-                                    entry.externalDataSize != externalDataSize) {
+                                    entry.externalDataSize != externalDataSize ||
+                                    entry.externalCacheSize != stats.externalCacheSize) {
                                 entry.size = newSize;
                                 entry.cacheSize = stats.cacheSize;
                                 entry.codeSize = stats.codeSize;
                                 entry.dataSize = stats.dataSize;
                                 entry.externalCodeSize = externalCodeSize;
                                 entry.externalDataSize = externalDataSize;
+                                entry.externalCacheSize = stats.externalCacheSize;
                                 entry.sizeStr = getSizeStr(entry.size);
                                 entry.internalSize = getTotalInternalSize(stats);
                                 entry.internalSizeStr = getSizeStr(entry.internalSize);
@@ -772,7 +872,18 @@ public class ApplicationsState {
         @Override
         public void handleMessage(Message msg) {
             // Always try rebuilding list first thing, if needed.
-            handleRebuildList();
+            ArrayList<Session> rebuildingSessions = null;
+            synchronized (mEntriesMap) {
+                if (mRebuildingSessions.size() > 0) {
+                    rebuildingSessions = new ArrayList<Session>(mRebuildingSessions);
+                    mRebuildingSessions.clear();
+                }
+            }
+            if (rebuildingSessions != null) {
+                for (int i=0; i<rebuildingSessions.size(); i++) {
+                    rebuildingSessions.get(i).handleRebuildList();
+                }
+            }
 
             switch (msg.what) {
                 case MSG_REBUILD_LIST: {

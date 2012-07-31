@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListFragment;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -27,6 +28,7 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.UserDictionary;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -44,22 +46,19 @@ import android.widget.SectionIndexer;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
-import com.android.settings.SettingsPreferenceFragment.SettingsDialogFragment;
+import com.android.settings.inputmethod.UserDictionaryAddWordContents;
 
 import java.util.Locale;
 
-public class UserDictionarySettings extends ListFragment implements DialogCreatable {
+public class UserDictionarySettings extends ListFragment {
     private static final String TAG = "UserDictionarySettings";
 
-    private static final String INSTANCE_KEY_DIALOG_EDITING_WORD = "DIALOG_EDITING_WORD";
-    private static final String INSTANCE_KEY_ADDED_WORD = "DIALOG_ADDED_WORD";
-
     private static final String[] QUERY_PROJECTION = {
-        UserDictionary.Words._ID, UserDictionary.Words.WORD
+        UserDictionary.Words._ID, UserDictionary.Words.WORD, UserDictionary.Words.SHORTCUT
     };
 
-    private static final int INDEX_ID = 0;
-    private static final int INDEX_WORD = 1;
+    // The index of the shortcut in the above array.
+    private static final int INDEX_SHORTCUT = 2;
 
     // Either the locale is empty (means the word is applicable to all locales)
     // or the word equals our current locale
@@ -68,27 +67,17 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
     private static final String QUERY_SELECTION_ALL_LOCALES =
             UserDictionary.Words.LOCALE + " is null";
 
-    private static final String DELETE_SELECTION = UserDictionary.Words.WORD + "=?";
-
-    private static final String EXTRA_WORD = "word";
+    private static final String DELETE_SELECTION_WITH_SHORTCUT = UserDictionary.Words.WORD
+            + "=? AND " + UserDictionary.Words.SHORTCUT + "=?";
+    private static final String DELETE_SELECTION_WITHOUT_SHORTCUT = UserDictionary.Words.WORD
+            + "=? AND " + UserDictionary.Words.SHORTCUT + " is null OR "
+            + UserDictionary.Words.SHORTCUT + "=''";
 
     private static final int OPTIONS_MENU_ADD = Menu.FIRST;
-
-    private static final int DIALOG_ADD_OR_EDIT = 0;
-
-    private static final int FREQUENCY_FOR_USER_DICTIONARY_ADDS = 250;
-
-    /** The word being edited in the dialog (null means the user is adding a word). */
-    private String mDialogEditingWord;
 
     private Cursor mCursor;
 
     protected String mLocale;
-
-    private boolean mAddedWordAlready;
-    private boolean mAutoReturn;
-
-    private SettingsDialogFragment mDialogFragment;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -135,31 +124,6 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
 
         setHasOptionsMenu(true);
 
-        if (savedInstanceState != null) {
-            mDialogEditingWord = savedInstanceState.getString(INSTANCE_KEY_DIALOG_EDITING_WORD);
-            mAddedWordAlready = savedInstanceState.getBoolean(INSTANCE_KEY_ADDED_WORD, false);
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        final Intent intent = getActivity().getIntent();
-        if (!mAddedWordAlready
-                && intent.getAction().equals("com.android.settings.USER_DICTIONARY_INSERT")) {
-            final String word = intent.getStringExtra(EXTRA_WORD);
-            mAutoReturn = true;
-            if (word != null) {
-                showAddOrEditDialog(word);
-            }
-        }
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString(INSTANCE_KEY_DIALOG_EDITING_WORD, mDialogEditingWord);
-        outState.putBoolean(INSTANCE_KEY_ADDED_WORD, mAddedWordAlready);
     }
 
     private Cursor createCursor(final String locale) {
@@ -189,15 +153,16 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
     private ListAdapter createAdapter() {
         return new MyAdapter(getActivity(),
                 R.layout.user_dictionary_item, mCursor,
-                new String[] { UserDictionary.Words.WORD, UserDictionary.Words._ID },
-                new int[] { android.R.id.text1, R.id.delete_button }, this);
+                new String[] { UserDictionary.Words.WORD, UserDictionary.Words.SHORTCUT },
+                new int[] { android.R.id.text1, android.R.id.text2 }, this);
     }
 
     @Override
     public void onListItemClick(ListView l, View v, int position, long id) {
-        String word = getWord(position);
+        final String word = getWord(position);
+        final String shortcut = getShortcut(position);
         if (word != null) {
-            showAddOrEditDialog(word);
+            showAddOrEditDialog(word, shortcut);
         }
     }
 
@@ -212,16 +177,34 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        showAddOrEditDialog(null);
-        return true;
+        if (item.getItemId() == OPTIONS_MENU_ADD) {
+            showAddOrEditDialog(null, null);
+            return true;
+        }
+        return false;
     }
 
-    private void showAddOrEditDialog(String editingWord) {
-        mDialogEditingWord = editingWord;
-        showDialog(DIALOG_ADD_OR_EDIT);
+    /**
+     * Add or edit a word. If editingWord is null, it's an add; otherwise, it's an edit.
+     * @param editingWord the word to edit, or null if it's an add.
+     * @param editingShortcut the shortcut for this entry, or null if none.
+     */
+    private void showAddOrEditDialog(final String editingWord, final String editingShortcut) {
+        final Bundle args = new Bundle();
+        args.putInt(UserDictionaryAddWordContents.EXTRA_MODE, null == editingWord
+                ? UserDictionaryAddWordContents.MODE_INSERT
+                : UserDictionaryAddWordContents.MODE_EDIT);
+        args.putString(UserDictionaryAddWordContents.EXTRA_WORD, editingWord);
+        args.putString(UserDictionaryAddWordContents.EXTRA_SHORTCUT, editingShortcut);
+        args.putString(UserDictionaryAddWordContents.EXTRA_LOCALE, mLocale);
+        android.preference.PreferenceActivity pa =
+                (android.preference.PreferenceActivity)getActivity();
+        pa.startPreferencePanel(
+                com.android.settings.inputmethod.UserDictionaryAddWordFragment.class.getName(),
+                args, R.string.user_dict_settings_add_dialog_title, null, null, 0);
     }
 
-    private String getWord(int position) {
+    private String getWord(final int position) {
         if (null == mCursor) return null;
         mCursor.moveToPosition(position);
         // Handle a possible race-condition
@@ -231,96 +214,45 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
                 mCursor.getColumnIndexOrThrow(UserDictionary.Words.WORD));
     }
 
-    @Override
-    public Dialog onCreateDialog(int id) {
-        final Activity activity = getActivity();
-        final AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
-        final LayoutInflater inflater = LayoutInflater.from(dialogBuilder.getContext());
-        final View content = inflater.inflate(R.layout.dialog_edittext, null);
-        final EditText editText = (EditText) content.findViewById(R.id.edittext);
-        editText.setText(mDialogEditingWord);
-        // No prediction in soft keyboard mode. TODO: Create a better way to disable prediction
-        editText.setInputType(InputType.TYPE_CLASS_TEXT 
-                | InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE);
+    private String getShortcut(final int position) {
+        if (null == mCursor) return null;
+        mCursor.moveToPosition(position);
+        // Handle a possible race-condition
+        if (mCursor.isAfterLast()) return null;
 
-        AlertDialog dialog = dialogBuilder
-                .setTitle(mDialogEditingWord != null 
-                        ? R.string.user_dict_settings_edit_dialog_title 
-                        : R.string.user_dict_settings_add_dialog_title)
-                .setView(content)
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        onAddOrEditFinished(editText.getText().toString());
-                        if (mAutoReturn) activity.onBackPressed();
-                    }})
-                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (mAutoReturn) activity.onBackPressed();
-                    }})
-                .create();
-        dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN |
-                WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-        return dialog;
+        return mCursor.getString(
+                mCursor.getColumnIndexOrThrow(UserDictionary.Words.SHORTCUT));
     }
 
-    private void showDialog(int dialogId) {
-        if (mDialogFragment != null) {
-            Log.e(TAG, "Old dialog fragment not null!");
-        }
-        mDialogFragment = new SettingsDialogFragment(this, dialogId);
-        mDialogFragment.show(getActivity().getFragmentManager(), Integer.toString(dialogId));
-    }
-
-    private void onAddOrEditFinished(String word) {
-        if (mDialogEditingWord != null) {
-            // The user was editing a word, so do a delete/add
-            deleteWord(mDialogEditingWord);
-        }
-
-        // Disallow duplicates
-        deleteWord(word);
-
-        // TODO: present UI for picking whether to add word to all locales, or current.
-        if (null == mLocale) {
-            // Null means insert with the default system locale.
-            UserDictionary.Words.addWord(getActivity(), word.toString(),
-                    FREQUENCY_FOR_USER_DICTIONARY_ADDS, UserDictionary.Words.LOCALE_TYPE_CURRENT);
-        } else if ("".equals(mLocale)) {
-            // Empty string means insert for all languages.
-            UserDictionary.Words.addWord(getActivity(), word.toString(),
-                    FREQUENCY_FOR_USER_DICTIONARY_ADDS, UserDictionary.Words.LOCALE_TYPE_ALL);
+    public static void deleteWord(final String word, final String shortcut,
+            final ContentResolver resolver) {
+        if (TextUtils.isEmpty(shortcut)) {
+            resolver.delete(
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITHOUT_SHORTCUT,
+                    new String[] { word });
         } else {
-            // TODO: fix the framework so that it can accept a locale when we add a word
-            // to the user dictionary instead of querying the system locale.
-            final Locale prevLocale = Locale.getDefault();
-            Locale.setDefault(Utils.createLocaleFromString(mLocale));
-            UserDictionary.Words.addWord(getActivity(), word.toString(),
-                    FREQUENCY_FOR_USER_DICTIONARY_ADDS, UserDictionary.Words.LOCALE_TYPE_CURRENT);
-            Locale.setDefault(prevLocale);
+            resolver.delete(
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITH_SHORTCUT,
+                    new String[] { word, shortcut });
         }
-        if (null != mCursor && !mCursor.requery()) {
-            throw new IllegalStateException("can't requery on already-closed cursor.");
-        }
-        mAddedWordAlready = true;
     }
 
-    private void deleteWord(String word) {
-        getActivity().getContentResolver().delete(
-                UserDictionary.Words.CONTENT_URI, DELETE_SELECTION, new String[] { word });
-    }
-
-    private static class MyAdapter extends SimpleCursorAdapter implements SectionIndexer,
-            View.OnClickListener {
+    private static class MyAdapter extends SimpleCursorAdapter implements SectionIndexer {
 
         private AlphabetIndexer mIndexer;
-        private UserDictionarySettings mSettings;
 
         private ViewBinder mViewBinder = new ViewBinder() {
 
             public boolean setViewValue(View v, Cursor c, int columnIndex) {
-                if (v instanceof ImageView && columnIndex == INDEX_ID) {
-                    v.setOnClickListener(MyAdapter.this);
-                    v.setTag(c.getString(INDEX_WORD));
+                if (columnIndex == INDEX_SHORTCUT) {
+                    final String shortcut = c.getString(INDEX_SHORTCUT);
+                    if (TextUtils.isEmpty(shortcut)) {
+                        v.setVisibility(View.GONE);
+                    } else {
+                        ((TextView)v).setText(shortcut);
+                        v.setVisibility(View.VISIBLE);
+                    }
+                    v.invalidate();
                     return true;
                 }
 
@@ -332,7 +264,6 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
                 UserDictionarySettings settings) {
             super(context, layout, c, from, to);
 
-            mSettings = settings;
             if (null != c) {
                 final String alphabet = context.getString(
                         com.android.internal.R.string.fast_scroll_alphabet);
@@ -352,10 +283,6 @@ public class UserDictionarySettings extends ListFragment implements DialogCreata
 
         public Object[] getSections() {
             return null == mIndexer ? null : mIndexer.getSections();
-        }
-
-        public void onClick(View v) {
-            mSettings.deleteWord((String) v.getTag());
         }
     }
 }

@@ -23,13 +23,17 @@
     android:gravity="center_vertical"
     android:paddingRight="?android:attr/scrollbarSize">
 
-    <ImageView
-        android:id="@+id/icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <LinearLayout
+        android:layout_width="@dimen/header_icon_width"
         android:layout_marginLeft="6dip"
         android:layout_marginRight="6dip"
-        android:layout_gravity="center" />
+        android:layout_height="wrap_content">
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </LinearLayout>
 
     <RelativeLayout
         android:layout_width="wrap_content"

@@ -17,17 +17,14 @@
 
 package com.android.settings;
 
-import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.media.AudioManager;
-import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.media.audiofx.AudioEffect;
 import android.net.Uri;
@@ -42,8 +39,6 @@ import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.provider.MediaStore.Images.Media;
-import android.provider.Settings.SettingNotFoundException;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -61,8 +56,7 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     /** If there is no setting in the provider, use this. */
     private static final int FALLBACK_EMERGENCY_TONE_VALUE = 0;
 
-    private static final String KEY_SILENT_MODE = "silent_mode";
-    private static final String KEY_VIBRATE = "vibrate_on_ring";
+    private static final String KEY_VIBRATE = "vibrate_when_ringing";
     private static final String KEY_RING_VOLUME = "ring_volume";
     private static final String KEY_MUSICFX = "musicfx";
     private static final String KEY_DTMF_TONE = "dtmf_tone";
@@ -82,10 +76,6 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private boolean blnExists = new File(BLN_FILE).exists();
     private boolean blnBlinkExists = new File(BLN_BLINK_FILE).exists();
 
-    private static final String SILENT_MODE_OFF = "off";
-    private static final String SILENT_MODE_VIBRATE = "vibrate";
-    private static final String SILENT_MODE_MUTE = "mute";
-
     private static final String[] NEED_VOICE_CAPABILITY = {
             KEY_RINGTONE, KEY_DTMF_TONE, KEY_CATEGORY_CALLS,
             KEY_EMERGENCY_TONE
@@ -94,8 +84,7 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private static final int MSG_UPDATE_RINGTONE_SUMMARY = 1;
     private static final int MSG_UPDATE_NOTIFICATION_SUMMARY = 2;
 
-    private CheckBoxPreference mVibrateOnRing;
-    private ListPreference mSilentMode;
+    private CheckBoxPreference mVibrateWhenRinging;
     private CheckBoxPreference mDtmfTone;
     private CheckBoxPreference mSoundEffects;
     private CheckBoxPreference mHapticFeedback;
@@ -110,15 +99,6 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private Runnable mRingtoneLookupRunnable;
 
     private AudioManager mAudioManager;
-
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(AudioManager.RINGER_MODE_CHANGED_ACTION)) {
-                updateState(false);
-            }
-        }
-    };
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -153,12 +133,8 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             getPreferenceScreen().removePreference(findPreference(KEY_EMERGENCY_TONE));
         }
 
-        mSilentMode = (ListPreference) findPreference(KEY_SILENT_MODE);
         if (!getResources().getBoolean(R.bool.has_silent_mode)) {
-            getPreferenceScreen().removePreference(mSilentMode);
             findPreference(KEY_RING_VOLUME).setDependency(null);
-        } else {
-            mSilentMode.setOnPreferenceChangeListener(this);
         }
 
         mBln = (CheckBoxPreference) findPreference(KEY_BLN);
@@ -179,8 +155,10 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             }
         }
 
-        mVibrateOnRing = (CheckBoxPreference) findPreference(KEY_VIBRATE);
-        mVibrateOnRing.setOnPreferenceChangeListener(this);
+        mVibrateWhenRinging = (CheckBoxPreference) findPreference(KEY_VIBRATE);
+        mVibrateWhenRinging.setPersistent(false);
+        mVibrateWhenRinging.setChecked(Settings.System.getInt(resolver,
+                Settings.System.VIBRATE_WHEN_RINGING, 0) != 0);
 
         mDtmfTone = (CheckBoxPreference) findPreference(KEY_DTMF_TONE);
         mDtmfTone.setPersistent(false);
@@ -202,8 +180,9 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         mRingtonePreference = findPreference(KEY_RINGTONE);
         mNotificationPreference = findPreference(KEY_NOTIFICATION_SOUND);
 
-        if (!((Vibrator) getSystemService(Context.VIBRATOR_SERVICE)).hasVibrator()) {
-            getPreferenceScreen().removePreference(mVibrateOnRing);
+        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (vibrator == null || !vibrator.hasVibrator()) {
+            getPreferenceScreen().removePreference(mVibrateWhenRinging);
             getPreferenceScreen().removePreference(mHapticFeedback);
         }
 
@@ -257,65 +236,7 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     public void onResume() {
         super.onResume();
 
-        updateState(true);
         lookupRingtoneNames();
-
-        IntentFilter filter = new IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION);
-        getActivity().registerReceiver(mReceiver, filter);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        getActivity().unregisterReceiver(mReceiver);
-    }
-
-    /**
-     * Put the audio system into the correct vibrate setting
-     */
-    private void setPhoneVibrateSettingValue(boolean vibeOnRing) {
-        // If vibrate-on-ring is checked, use VIBRATE_SETTING_ON
-        // Otherwise vibrate is off when ringer is silent
-        int vibrateMode = vibeOnRing ? AudioManager.VIBRATE_SETTING_ON
-                : AudioManager.VIBRATE_SETTING_ONLY_SILENT;
-        mAudioManager.setVibrateSetting(AudioManager.VIBRATE_TYPE_RINGER, vibrateMode);
-        mAudioManager.setVibrateSetting(AudioManager.VIBRATE_TYPE_NOTIFICATION, vibrateMode);
-    }
-
-    private void setPhoneSilentSettingValue(String value) {
-        int ringerMode = AudioManager.RINGER_MODE_NORMAL;
-        if (value.equals(SILENT_MODE_MUTE)) {
-            ringerMode = AudioManager.RINGER_MODE_SILENT;
-        } else if (value.equals(SILENT_MODE_VIBRATE)) {
-            ringerMode = AudioManager.RINGER_MODE_VIBRATE;
-        }
-        mAudioManager.setRingerMode(ringerMode);
-    }
-
-    private String getPhoneSilentModeSettingValue() {
-        switch (mAudioManager.getRingerMode()) {
-        case AudioManager.RINGER_MODE_NORMAL:
-            return SILENT_MODE_OFF;
-        case AudioManager.RINGER_MODE_VIBRATE:
-            return SILENT_MODE_VIBRATE;
-        case AudioManager.RINGER_MODE_SILENT:
-            return SILENT_MODE_MUTE;
-        }
-        // Shouldn't happen
-        return SILENT_MODE_OFF;
-    }
-
-    // updateState in fact updates the UI to reflect the system state
-    private void updateState(boolean force) {
-        if (getActivity() == null) return;
-
-        final int vibrateMode = mAudioManager.getVibrateSetting(AudioManager.VIBRATE_TYPE_RINGER);
-
-        mVibrateOnRing.setChecked(vibrateMode == AudioManager.VIBRATE_SETTING_ON);
-        mSilentMode.setValue(getPhoneSilentModeSettingValue());
-
-        mSilentMode.setSummary(mSilentMode.getEntry());
     }
 
     private void updateRingtoneName(int type, Preference preference, int msg) {
@@ -351,7 +272,10 @@ public class SoundSettings extends SettingsPreferenceFragment implements
 
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
-        if (preference == mDtmfTone) {
+        if (preference == mVibrateWhenRinging) {
+            Settings.System.putInt(getContentResolver(), Settings.System.VIBRATE_WHEN_RINGING,
+                    mVibrateWhenRinging.isChecked() ? 1 : 0);
+        } else if (preference == mDtmfTone) {
             Settings.System.putInt(getContentResolver(), Settings.System.DTMF_TONE_WHEN_DIALING,
                     mDtmfTone.isChecked() ? 1 : 0);
 
@@ -407,13 +331,14 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             } catch (NumberFormatException e) {
                 Log.e(TAG, "could not persist emergency tone setting", e);
             }
-        } else if (preference == mVibrateOnRing) {
-            setPhoneVibrateSettingValue((Boolean) objValue);
-        } else if (preference == mSilentMode) {
-            setPhoneSilentSettingValue(objValue.toString());
         }
 
         return true;
+    }
+
+    @Override
+    protected int getHelpResource() {
+        return R.string.help_url_sound;
     }
 
     public static String readOneLine(String fname) {
