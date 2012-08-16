@@ -3786,8 +3786,9 @@ found in the list of installed apps.</string>
 
     <!-- Crossbones additions -->
 
-    <!-- Donate -->
-    <string name="donate_title">Donate to Crossbones</string>
+    <string name="about_crossbones_title">About Crossbones</string>
+    <string name="about_crossbones_package">com.crossbones.welcome</string>
+    <string name="about_crossbones_class">com.crossbones.welcome.AboutActivity</string>
 
     <!-- CPU settings -->
     <string name="cpu_settings">CPU</string>
