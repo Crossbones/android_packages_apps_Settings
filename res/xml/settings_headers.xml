@@ -163,17 +163,6 @@
     <!-- SYSTEM -->
     <header android:title="@string/header_category_system" />
 
-    <!-- Donate -->
-    <header
-        android:icon="@drawable/ic_settings_donate"
-        android:title="@string/donate_title"
-        android:id="@+id/donate" >
-        <intent
-            android:action="android.intent.action.DONATE"
-            android:targetPackage="com.crossbones.welcome"
-            android:targetClass="com.crossbones.welcome.Donate" />
-     </header>
-
     <!-- Dock -->
     <header
         android:id="@+id/dock_settings"
