@@ -4418,4 +4418,10 @@
     <string name="clock_title_enable">Clock style</string>
     <string name="title_clock_ampm_entries">AM/PM style</string> 
 
+    <!-- Launcher settings  -->
+    <string name="launcher_settings_title">Launcher</string>
+
+    <!-- Themes settings  -->
+    <string name="themes_settings_title">Themes</string>
+
 </resources>
