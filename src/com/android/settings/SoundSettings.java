@@ -73,7 +73,6 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     public static final String KEY_BLN_BLINK = "bln_blink";
     public static final String BLN_FILE = "/sys/class/misc/backlightnotification/enabled";
     public static final String BLN_BLINK_FILE = "/sys/class/misc/backlightnotification/in_kernel_blink";
-    private boolean blnExists = new File(BLN_FILE).exists();
     private boolean blnBlinkExists = new File(BLN_BLINK_FILE).exists();
 
     private static final String[] NEED_VOICE_CAPABILITY = {
@@ -140,7 +139,7 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         mBln = (CheckBoxPreference) findPreference(KEY_BLN);
         mBlnBlink = (CheckBoxPreference) findPreference(KEY_BLN_BLINK);
 
-        if (!blnExists) {
+        if (!getResources().getBoolean(R.bool.device_enable_bln)) {
             getPreferenceScreen().removePreference(findPreference(KEY_BLN));
             getPreferenceScreen().removePreference(findPreference(KEY_BLN_BLINK));
         } else {
