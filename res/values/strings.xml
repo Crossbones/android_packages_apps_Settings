@@ -4152,4 +4152,8 @@
     <string name="bln_blink_title">BLN blink</string>
     <string name="bln_blink_summary">Capacitive buttons will blink when notification is received</string>
 
+    <!-- Display settings -->
+    <string name="gpu_clock_title">GPU clock speed</string>
+    <string name="gpu_clock_summary" translatable="false">%1$s</string>
+
 </resources>

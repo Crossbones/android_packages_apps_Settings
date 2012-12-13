@@ -58,4 +58,11 @@
             android:title="@string/notification_pulse_title"
             android:persistent="false" />
 
+        <ListPreference
+                android:key="gpu_clock"
+                android:title="@string/gpu_clock_title"
+                android:summary="@string/gpu_clock_summary"
+                android:entries="@array/gpu_clock_entries"
+                android:entryValues="@array/gpu_clock_values" />
+
 </PreferenceScreen>

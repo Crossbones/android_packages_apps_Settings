@@ -43,6 +43,7 @@ public class OnBootCompleted extends IntentService {
         String minFrequency = prefs.getString(CPUSettings.KEY_MIN_FREQ, null);
         String maxFrequency = prefs.getString(CPUSettings.KEY_MAX_FREQ, null);
         String scheduler = prefs.getString(CPUSettings.KEY_SCHEDULER, null);
+        String gpuClock = prefs.getString(DisplaySettings.KEY_GPU_CLOCK, null);
         boolean bln = prefs.getBoolean(SoundSettings.KEY_BLN, true);
         boolean blnBlink = prefs.getBoolean(SoundSettings.KEY_BLN_BLINK, true);
 
@@ -79,6 +80,10 @@ public class OnBootCompleted extends IntentService {
                 if (schedulers.contains(scheduler)) {
                     KernelUtils.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
                 }
+            }
+            // Set previous GPU clock frequency
+            if (KernelUtils.fileExists(DisplaySettings.GPU_CLOCK_FILE) && gpuClock != null) {
+                KernelUtils.writeOneLine(DisplaySettings.GPU_CLOCK_FILE, gpuClock);
             }
             // Set previous BLN setting
             if (KernelUtils.fileExists(SoundSettings.BLN_FILE)) {
