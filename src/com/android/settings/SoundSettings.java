@@ -63,9 +63,11 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private static final String KEY_RINGTONE = "ringtone";
     private static final String KEY_NOTIFICATION_SOUND = "notification_sound";
     private static final String KEY_CATEGORY_CALLS = "category_calls";
+    public static final String KEY_HIGH_PERF_SOUND = "high_perf_sound";
     public static final String KEY_BLN = "bln";
     public static final String KEY_BLN_BLINK = "bln_blink";
 
+    public static final String HIGH_PERF_SOUND_FILE = "/sys/class/misc/soundcontrol/highperf_enabled";
     public static final String BLN_FILE = "/sys/class/misc/backlightnotification/enabled";
     public static final String BLN_BLINK_FILE = "/sys/class/misc/backlightnotification/in_kernel_blink";
 
@@ -86,6 +88,7 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private Preference mRingtonePreference;
     private Preference mNotificationPreference;
 
+    public CheckBoxPreference mHighPerfSound;
     public CheckBoxPreference mBln;
     public CheckBoxPreference mBlnBlink;
 
@@ -130,9 +133,18 @@ public class SoundSettings extends SettingsPreferenceFragment implements
             findPreference(KEY_RING_VOLUME).setDependency(null);
         }
 
+        mHighPerfSound = (CheckBoxPreference) findPreference(KEY_HIGH_PERF_SOUND);
+        if (!getResources().getBoolean(R.bool.device_enable_high_perf_sound)) {
+            getPreferenceScreen().removePreference(findPreference(KEY_HIGH_PERF_SOUND));
+        } else if (!KernelUtils.fileExists(HIGH_PERF_SOUND_FILE)) {
+            mHighPerfSound.setEnabled(false);
+            mHighPerfSound.setSummary(R.string.feature_not_supported);
+        } else {
+            mHighPerfSound.setOnPreferenceChangeListener(this);
+        }
+
         mBln = (CheckBoxPreference) findPreference(KEY_BLN);
         mBlnBlink = (CheckBoxPreference) findPreference(KEY_BLN_BLINK);
-
         if (!getResources().getBoolean(R.bool.device_enable_bln)) {
             getPreferenceScreen().removePreference(findPreference(KEY_BLN));
             getPreferenceScreen().removePreference(findPreference(KEY_BLN_BLINK));
@@ -299,6 +311,8 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         } else if (preference == mMusicFx) {
             // let the framework fire off the intent
             return false;
+        } else if (preference == mHighPerfSound) {
+            KernelUtils.writeOneLine(HIGH_PERF_SOUND_FILE, Integer.toString(mHighPerfSound.isChecked() ? 1 : 0));
         } else if (preference == mBln) {
             String blnChecked;
             if (!mBln.isChecked()) {

@@ -69,6 +69,12 @@
             android:defaultValue="true" />
 
     <CheckBoxPreference
+            android:key="high_perf_sound"
+            android:title="@string/high_perf_sound_title"
+            android:summary="@string/high_perf_sound_summary"
+            android:defaultValue="false" />
+
+    <CheckBoxPreference
             android:key="bln_blink"
             android:title="@string/bln_blink_title"
             android:summary="@string/bln_blink_summary"

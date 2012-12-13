@@ -4146,11 +4146,13 @@
     <string name="cpu_schedulers_title">Scheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
 
-    <!-- BLN settings -->
+    <!-- Sound settings -->
     <string name="bln_title">BLN</string>
     <string name="bln_summary">Enable capacitive buttons to emulate LED notifications</string>
     <string name="bln_blink_title">BLN blink</string>
     <string name="bln_blink_summary">Capacitive buttons will blink when notification is received</string>
+    <string name="high_perf_sound_title">High performance sound</string>
+    <string name="high_perf_sound_summary">Improve sound quality through driver</string>
 
     <!-- Display settings -->
     <string name="gpu_clock_title">GPU clock speed</string>

@@ -25,6 +25,9 @@
     <!-- True if GPU clock speed can be modified on device -->
     <bool name="device_enable_gpu_clock" translatable="false">false</bool>
 
+    <!-- True if device has High Performance Sound support -->
+    <bool name="device_enable_high_perf_sound" translatable="false">false</bool>
+
     <!-- True if device has BLN (Back Light Notification) support -->
     <bool name="device_enable_bln" translatable="false">false</bool>
 
