@@ -4133,6 +4133,8 @@
     <string name="about_crossbones_package">com.crossbones.welcome</string>
     <string name="about_crossbones_class">com.crossbones.welcome.AboutActivity</string>
 
+    <string name="feature_not_supported">Your kernel does not support this feature</string>
+
     <!-- CPU settings -->
     <string name="cpu_settings">CPU</string>
     <string name="cpu_governors_title">Governor</string>
@@ -4143,7 +4145,6 @@
     <string name="cpu_max_freq_summary">Maximum CPU frequency\nCurrently: %s</string>
     <string name="cpu_schedulers_title">Scheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
-    <string name="cpu_not_supported">Your kernel does not support this feature</string>
 
     <!-- BLN settings -->
     <string name="bln_title">BLN</string>

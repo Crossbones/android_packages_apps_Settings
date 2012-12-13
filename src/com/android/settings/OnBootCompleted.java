@@ -17,9 +17,6 @@
 
 package com.android.settings;
 
-import com.android.settings.CPUSettings;
-import com.android.settings.SoundSettings;
-
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
@@ -27,15 +24,12 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
-
 import java.util.Arrays;
 import java.util.List;
 
 public class OnBootCompleted extends IntentService {
 
-    private static final String TAG = "Settings.OnBootCompleted";
+    private static final String TAG = "OnBootCompleted";
 	public OnBootCompleted() {
 		super("OnBootCompleted");
 	}
@@ -45,56 +39,64 @@ public class OnBootCompleted extends IntentService {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        String governor = prefs.getString(CPUSettings.GOV_PREF, null);
-        String existsFrequency = CPUSettings.readOneLine("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies");
-        String minFrequency = prefs.getString(CPUSettings.MIN_FREQ_PREF, null);
-        String maxFrequency = prefs.getString(CPUSettings.MAX_FREQ_PREF, null);
-        String scheduler = prefs.getString(CPUSettings.SCHED_PREF, null);
+        String governor = prefs.getString(CPUSettings.KEY_GOVERNOR, null);
+        String minFrequency = prefs.getString(CPUSettings.KEY_MIN_FREQ, null);
+        String maxFrequency = prefs.getString(CPUSettings.KEY_MAX_FREQ, null);
+        String scheduler = prefs.getString(CPUSettings.KEY_SCHEDULER, null);
         boolean bln = prefs.getBoolean(SoundSettings.KEY_BLN, true);
         boolean blnBlink = prefs.getBoolean(SoundSettings.KEY_BLN_BLINK, true);
-        boolean blnExists = new File(SoundSettings.BLN_FILE).exists();
-        boolean blnBlinkExists = new File(SoundSettings.BLN_BLINK_FILE).exists();
 
-        boolean noSettings = (governor == null) && (minFrequency == null) && (maxFrequency == null) && (scheduler == null) && (blnExists == false) && (blnBlinkExists == false);
-
-        if (noSettings) {
-            Log.d(TAG, "No settings saved. No kernel specific settings to restore.");
+        if (prefs == null) {
+            Log.i(TAG, "No settings saved. No kernel specific settings to restore.");
         } else {
+            // Set previous CPU governor
             if (governor != null) {
-                List<String> governors = Arrays.asList(CPUSettings.readOneLine(
+                List<String> governors = Arrays.asList(KernelUtils.readOneLine(
                         CPUSettings.GOVERNORS_LIST_FILE).split(" "));
                 if(governors.contains(governor)) {
-                    CPUSettings.writeOneLine(CPUSettings.GOVERNOR, governor);
+                    KernelUtils.writeOneLine(CPUSettings.GOVERNOR_FILE, governor);
                 }
             }
-            if (existsFrequency != null) {
-                List<String> frequencies = Arrays.asList(CPUSettings.readOneLine(
+            // Set previous min and max CPU frequencies
+            if (KernelUtils.fileExists(CPUSettings.FREQ_LIST_FILE)) {
+                List<String> frequencies = Arrays.asList(KernelUtils.readOneLine(
                         CPUSettings.FREQ_LIST_FILE).split(" "));
-                if (maxFrequency != null && frequencies.contains(maxFrequency)) {
-                    CPUSettings.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
-                }
                 if (minFrequency != null && frequencies.contains(minFrequency)) {
-                    CPUSettings.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+                    if (KernelUtils.fileExists(CPUSettings.FREQ_MIN_FILE)) {
+                        KernelUtils.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+                    }
+                }
+                if (maxFrequency != null && frequencies.contains(maxFrequency)) {
+                    if (KernelUtils.fileExists(CPUSettings.FREQ_MAX_FILE)) {
+                        KernelUtils.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
+                    }
                 }
             }
+            // Set previous CPU scheduler
             if (scheduler != null) {
-                List<String> schedulers = Arrays.asList(CPUSettings.readOneLine(
+                List<String> schedulers = Arrays.asList(KernelUtils.readOneLine(
                         CPUSettings.SCHEDULER_FILE).split(" "));
                 if (schedulers.contains(scheduler)) {
-                    CPUSettings.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
+                    KernelUtils.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
                 }
             }
-            if (bln == false || blnExists == false) {
-                SoundSettings.writeOneLine(SoundSettings.BLN_FILE, "0");
-            } else if (bln == true || blnExists == true){
-                SoundSettings.writeOneLine(SoundSettings.BLN_FILE, "1");
+            // Set previous BLN setting
+            if (KernelUtils.fileExists(SoundSettings.BLN_FILE)) {
+                if (!bln) {
+                    KernelUtils.writeOneLine(SoundSettings.BLN_FILE, "0");
+                } else {
+                    KernelUtils.writeOneLine(SoundSettings.BLN_FILE, "1");
+                }
             }
-            if (blnBlink == false || blnBlinkExists == false) {
-                SoundSettings.writeOneLine(SoundSettings.BLN_BLINK_FILE, "0");
-            } else if (blnBlink == true || blnBlinkExists == true) {
-                SoundSettings.writeOneLine(SoundSettings.BLN_BLINK_FILE, "1");
+            // Set previous BLN Blink setting
+            if (KernelUtils.fileExists(SoundSettings.BLN_FILE) && KernelUtils.fileExists(SoundSettings.BLN_BLINK_FILE)) {
+              if (!blnBlink) {
+                   KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, "0");
+               } else {
+                   KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, "1");
+               }
             }
-            Log.d(TAG, "Kernel specific settings restored.");
+            Log.i(TAG, "Kernel specific settings restored.");
         }
     }
 }
