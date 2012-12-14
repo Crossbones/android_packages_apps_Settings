@@ -116,8 +116,6 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         super.onCreate(savedInstanceState);
         ContentResolver resolver = getContentResolver();
 
-        String bln;
-
         int activePhoneType = TelephonyManager.getDefault().getCurrentPhoneType();
 
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -148,22 +146,18 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         if (!getResources().getBoolean(R.bool.device_enable_bln)) {
             getPreferenceScreen().removePreference(findPreference(KEY_BLN));
             getPreferenceScreen().removePreference(findPreference(KEY_BLN_BLINK));
-        } else if (!KernelUtils.fileExists(SoundSettings.BLN_FILE)) {
+        } else if (!KernelUtils.fileExists(BLN_FILE)) {
             mBln.setEnabled(false);
             mBln.setSummary(R.string.feature_not_supported);
-            if (!KernelUtils.fileExists(SoundSettings.BLN_BLINK_FILE)) {
+            if (!KernelUtils.fileExists(BLN_BLINK_FILE)) {
                 mBlnBlink.setEnabled(false);
                 mBlnBlink.setSummary(R.string.feature_not_supported);
             }
         } else {
-            bln = KernelUtils.readOneLine(BLN_FILE);
             mBln.setOnPreferenceChangeListener(this);
+            mBlnBlink.setEnabled(mBln.isChecked());
             if (mBln.isChecked()) {
-                bln = KernelUtils.readOneLine(BLN_BLINK_FILE);
                 mBlnBlink.setOnPreferenceChangeListener(this);
-                mBlnBlink.setEnabled(true);
-            } else {
-                mBlnBlink.setEnabled(false);
             }
         }
 
@@ -314,23 +308,10 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         } else if (preference == mHighPerfSound) {
             KernelUtils.writeOneLine(HIGH_PERF_SOUND_FILE, Integer.toString(mHighPerfSound.isChecked() ? 1 : 0));
         } else if (preference == mBln) {
-            String blnChecked;
-            if (!mBln.isChecked()) {
-                blnChecked="0";
-                mBlnBlink.setEnabled(false);
-            } else {
-                blnChecked="1";
-                mBlnBlink.setEnabled(true);
-            }
-            KernelUtils.writeOneLine(BLN_FILE, blnChecked);
+            mBlnBlink.setEnabled(mBln.isChecked());
+            KernelUtils.writeOneLine(BLN_FILE, Integer.toString(mBln.isChecked() ? 1 : 0));
         } else if (preference == mBlnBlink) {
-            String blnBlinkChecked;
-            if (!mBlnBlink.isChecked()) {
-                blnBlinkChecked="0";
-            } else {
-                blnBlinkChecked="1";
-            }
-            KernelUtils.writeOneLine(BLN_BLINK_FILE, blnBlinkChecked);
+            KernelUtils.writeOneLine(BLN_BLINK_FILE, Integer.toString(mBlnBlink.isChecked() ? 1 : 0));
         }
         return true;
     }

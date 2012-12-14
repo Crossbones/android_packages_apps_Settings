@@ -92,19 +92,11 @@ public class OnBootCompleted extends IntentService {
             }
             // Set previous BLN setting
             if (KernelUtils.fileExists(SoundSettings.BLN_FILE)) {
-                if (!bln) {
-                    KernelUtils.writeOneLine(SoundSettings.BLN_FILE, "0");
-                } else {
-                    KernelUtils.writeOneLine(SoundSettings.BLN_FILE, "1");
-                }
+                KernelUtils.writeOneLine(SoundSettings.BLN_FILE, Integer.toString(bln ? 1 : 0));
             }
             // Set previous BLN Blink setting
             if (KernelUtils.fileExists(SoundSettings.BLN_FILE) && KernelUtils.fileExists(SoundSettings.BLN_BLINK_FILE)) {
-              if (!blnBlink) {
-                   KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, "0");
-               } else {
-                   KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, "1");
-               }
+                KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, Integer.toString(blnBlink ? 1 : 0));
             }
             Log.i(TAG, "Kernel specific settings restored.");
         }
