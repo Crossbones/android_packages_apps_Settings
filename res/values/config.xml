@@ -32,6 +32,9 @@
     <!-- True if device has BLN (Back Light Notification) support -->
     <bool name="device_enable_bln" translatable="false">false</bool>
 
+    <!-- LED Flashlight -->
+    <bool name="has_led_flash">false</bool>
+
     <!-- TODO: This is purely enforced by the interface, and does not affect what
          strings may be inserted into the actual content provider.
          With the addition of shortcuts, it seems more likely that users will
