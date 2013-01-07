@@ -104,6 +104,12 @@
                 android:title="@string/firmware_version"
                 android:summary="@string/device_info_default"/>
 
+        <!-- Device ROM version -->
+        <Preference android:key="rom_version" 
+                style="?android:preferenceInformationStyle"
+                android:title="@string/rom_version"
+                android:summary="@string/device_info_default"/>
+
         <!-- Device FCC equipment id -->
         <Preference android:key="fcc_equipment_id"
                 style="?android:preferenceInformationStyle"
