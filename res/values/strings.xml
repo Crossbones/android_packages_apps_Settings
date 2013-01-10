@@ -4397,4 +4397,9 @@
     <string name="cell_broadcast_settings">Cell broadcasts</string>
     <!-- Cell Broadcast settings description [CHAR LIMIT=100] -->
     <string name="cell_broadcast_settings_summary">Select the types of emergency alerts to display.</string>
+
+    <!-- Crossbones additions -->
+    <string name="about_crossbones_title">About Crossbones</string>
+    <string name="about_crossbones_package">com.crossbones.welcome</string>
+    <string name="about_crossbones_class">com.crossbones.welcome.AboutActivity</string>
 </resources>

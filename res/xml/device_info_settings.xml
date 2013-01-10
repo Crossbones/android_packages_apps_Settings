@@ -24,6 +24,14 @@
             <intent android:action="android.settings.SYSTEM_UPDATE_SETTINGS" />
         </PreferenceScreen> -->
 
+        <!-- About Crossbones - launches activity -->
+        <PreferenceScreen android:key="about_crossbones_pref"
+                          android:title="@string/about_crossbones_title">
+            <intent android:action="android.intent.action.ABOUT"
+                    android:targetPackage="@string/about_crossbones_package"
+                    android:targetClass="@string/about_crossbones_class" />
+        </PreferenceScreen>
+
 
         <PreferenceScreen android:key="additional_system_update_settings"
                           android:title="@string/additional_system_update_settings_list_item_title">
