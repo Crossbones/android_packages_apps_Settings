@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (C) 2007 The Android Open Source Project
+     Copyright (C) 2013 Crossbones Software
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -21,6 +22,15 @@
 
     <string name="additional_system_update" translatable="false"></string>
     <string name="additional_system_update_menu" translatable="false"></string>
+
+    <!-- True if GPU clock speed can be modified on device -->
+    <bool name="device_enable_gpu_clock" translatable="false">false</bool>
+
+    <!-- True if device has High Performance Sound support -->
+    <bool name="device_enable_high_perf_sound" translatable="false">false</bool>
+
+    <!-- True if device has BLN (Back Light Notification) support -->
+    <bool name="device_enable_bln" translatable="false">false</bool>
 
     <!-- TODO: This is purely enforced by the interface, and does not affect what
          strings may be inserted into the actual content provider.

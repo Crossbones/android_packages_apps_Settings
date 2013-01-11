@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (C) 2008 The Android Open Source Project
+     Copyright (C) 2013 Crossbones Software
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -61,6 +62,24 @@
             android:dialogTitle="@string/notification_sound_dialog_title"
             android:persistent="false"
             android:ringtoneType="notification" />
+
+    <CheckBoxPreference
+            android:key="bln"
+            android:title="@string/bln_title"
+            android:summary="@string/bln_summary"
+            android:defaultValue="true" />
+
+    <CheckBoxPreference
+            android:key="high_perf_sound"
+            android:title="@string/high_perf_sound_title"
+            android:summary="@string/high_perf_sound_summary"
+            android:defaultValue="false" />
+
+    <CheckBoxPreference
+            android:key="bln_blink"
+            android:title="@string/bln_blink_title"
+            android:summary="@string/bln_blink_summary"
+            android:defaultValue="true" />
 
     <CheckBoxPreference
             android:key="dtmf_tone"

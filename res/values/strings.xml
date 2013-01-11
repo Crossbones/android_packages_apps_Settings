@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (C) 2007 The Android Open Source Project
+     Copyright (C) 2013 Crossbones Software
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -4402,4 +4403,30 @@
     <string name="about_crossbones_title">About Crossbones</string>
     <string name="about_crossbones_package">com.crossbones.welcome</string>
     <string name="about_crossbones_class">com.crossbones.welcome.AboutActivity</string>
+
+    <string name="feature_not_supported">Your kernel does not support this feature</string>
+
+    <!-- CPU settings -->
+    <string name="cpu_settings">CPU</string>
+    <string name="cpu_governors_title">Governor</string>
+    <string name="cpu_governors_summary">List of available governors\nCurrently selected: %S</string>
+    <string name="cpu_min_freq_title">Min CPU frequency</string>
+    <string name="cpu_min_freq_summary">Minimum CPU frequency\nCurrently: %s</string>
+    <string name="cpu_max_freq_title">Max CPU frequency</string>
+    <string name="cpu_max_freq_summary">Maximum CPU frequency\nCurrently: %s</string>
+    <string name="cpu_schedulers_title">Scheduler</string>
+    <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
+
+    <!-- Sound settings -->
+    <string name="bln_title">BLN</string>
+    <string name="bln_summary">Enable capacitive buttons to emulate LED notifications</string>
+    <string name="bln_blink_title">BLN blink</string>
+    <string name="bln_blink_summary">Capacitive buttons will blink when notification is received</string>
+    <string name="high_perf_sound_title">High performance sound</string>
+    <string name="high_perf_sound_summary">Improve sound quality through driver</string>
+
+    <!-- Display settings -->
+    <string name="gpu_clock_title">GPU clock speed</string>
+    <string name="gpu_clock_summary" translatable="false">%1$s</string>
+
 </resources>

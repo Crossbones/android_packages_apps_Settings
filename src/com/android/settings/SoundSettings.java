@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2013 Crossbones Software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,6 +76,13 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private static final String KEY_DOCK_AUDIO_SETTINGS = "dock_audio";
     private static final String KEY_DOCK_SOUNDS = "dock_sounds";
     private static final String KEY_DOCK_AUDIO_MEDIA_ENABLED = "dock_audio_media_enabled";
+    public static final String KEY_HIGH_PERF_SOUND = "high_perf_sound";
+    public static final String KEY_BLN = "bln";
+    public static final String KEY_BLN_BLINK = "bln_blink";
+
+    public static final String HIGH_PERF_SOUND_FILE = "/sys/class/misc/soundcontrol/highperf_enabled";
+    public static final String BLN_FILE = "/sys/class/misc/backlightnotification/enabled";
+    public static final String BLN_BLINK_FILE = "/sys/class/misc/backlightnotification/in_kernel_blink";
 
     private static final String[] NEED_VOICE_CAPABILITY = {
             KEY_RINGTONE, KEY_DTMF_TONE, KEY_CATEGORY_CALLS,
@@ -101,6 +109,10 @@ public class SoundSettings extends SettingsPreferenceFragment implements
     private CheckBoxPreference mDockSounds;
     private Intent mDockIntent;
     private CheckBoxPreference mDockAudioMediaEnabled;
+
+    public CheckBoxPreference mHighPerfSound;
+    public CheckBoxPreference mBln;
+    public CheckBoxPreference mBlnBlink;
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -143,6 +155,36 @@ public class SoundSettings extends SettingsPreferenceFragment implements
 
         if (!getResources().getBoolean(R.bool.has_silent_mode)) {
             findPreference(KEY_RING_VOLUME).setDependency(null);
+        }
+
+        mHighPerfSound = (CheckBoxPreference) findPreference(KEY_HIGH_PERF_SOUND);
+        if (!getResources().getBoolean(R.bool.device_enable_high_perf_sound)) {
+            getPreferenceScreen().removePreference(findPreference(KEY_HIGH_PERF_SOUND));
+        } else if (!KernelUtils.fileExists(HIGH_PERF_SOUND_FILE)) {
+            mHighPerfSound.setEnabled(false);
+            mHighPerfSound.setSummary(R.string.feature_not_supported);
+        } else {
+            mHighPerfSound.setOnPreferenceChangeListener(this);
+        }
+
+        mBln = (CheckBoxPreference) findPreference(KEY_BLN);
+        mBlnBlink = (CheckBoxPreference) findPreference(KEY_BLN_BLINK);
+        if (!getResources().getBoolean(R.bool.device_enable_bln)) {
+            getPreferenceScreen().removePreference(findPreference(KEY_BLN));
+            getPreferenceScreen().removePreference(findPreference(KEY_BLN_BLINK));
+        } else if (!KernelUtils.fileExists(BLN_FILE)) {
+            mBln.setEnabled(false);
+            mBln.setSummary(R.string.feature_not_supported);
+            if (!KernelUtils.fileExists(BLN_BLINK_FILE)) {
+                mBlnBlink.setEnabled(false);
+                mBlnBlink.setSummary(R.string.feature_not_supported);
+            }
+        } else {
+            mBln.setOnPreferenceChangeListener(this);
+            mBlnBlink.setEnabled(mBln.isChecked());
+            if (mBln.isChecked()) {
+                mBlnBlink.setOnPreferenceChangeListener(this);
+            }
         }
 
         mVibrateWhenRinging = (CheckBoxPreference) findPreference(KEY_VIBRATE);
@@ -334,6 +376,13 @@ public class SoundSettings extends SettingsPreferenceFragment implements
         } else if (preference == mDockAudioMediaEnabled) {
             Settings.Global.putInt(getContentResolver(), Settings.Global.DOCK_AUDIO_MEDIA_ENABLED,
                     mDockAudioMediaEnabled.isChecked() ? 1 : 0);
+        }  else if (preference == mHighPerfSound) {
+            KernelUtils.writeOneLine(HIGH_PERF_SOUND_FILE, Integer.toString(mHighPerfSound.isChecked() ? 1 : 0));
+        } else if (preference == mBln) {
+            mBlnBlink.setEnabled(mBln.isChecked());
+            KernelUtils.writeOneLine(BLN_FILE, Integer.toString(mBln.isChecked() ? 1 : 0));
+        } else if (preference == mBlnBlink) {
+            KernelUtils.writeOneLine(BLN_BLINK_FILE, Integer.toString(mBlnBlink.isChecked() ? 1 : 0));
         }
         return true;
     }

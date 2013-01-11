@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2013 Crossbones Software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +62,9 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
     private static final String KEY_NOTIFICATION_PULSE = "notification_pulse";
     private static final String KEY_SCREEN_SAVER = "screensaver";
     private static final String KEY_WIFI_DISPLAY = "wifi_display";
+    public static final String KEY_GPU_CLOCK = "gpu_clock";
+
+    public static final String GPU_CLOCK_FILE = "/sys/devices/system/cpu/cpu0/cpufreq/gpu_oc";
 
     private static final int DLG_GLOBAL_CHANGE_WARNING = 1;
 
@@ -74,6 +78,8 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
     
     private ListPreference mScreenTimeoutPreference;
     private Preference mScreenSaverPreference;
+
+    private ListPreference mGpuClockPref;
 
     private WifiDisplayStatus mWifiDisplayStatus;
     private Preference mWifiDisplayPreference;
@@ -132,6 +138,16 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
             } catch (SettingNotFoundException snfe) {
                 Log.e(TAG, Settings.System.NOTIFICATION_LIGHT_PULSE + " not found");
             }
+        }
+
+        mGpuClockPref = (ListPreference) findPreference(KEY_GPU_CLOCK);
+        if (!getResources().getBoolean(R.bool.device_enable_gpu_clock)) {
+            getPreferenceScreen().removePreference(mGpuClockPref);
+        } else if (!KernelUtils.fileExists(GPU_CLOCK_FILE)) {
+            mGpuClockPref.setEnabled(false);
+            mGpuClockPref.setSummary(R.string.feature_not_supported);
+        } else {
+            mGpuClockPref.setOnPreferenceChangeListener(this);
         }
 
         mDisplayManager = (DisplayManager)getActivity().getSystemService(
@@ -284,6 +300,9 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
         updateAccelerometerRotationCheckbox();
         readFontSizePreference(mFontSizePref);
         updateScreenSaverSummary();
+        if (getResources().getBoolean(R.bool.device_enable_gpu_clock)) { 
+            readGpuClockPreference();
+        }
         updateWifiDisplaySummary();
     }
 
@@ -326,6 +345,28 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
         }
     }
 
+    public void writeGpuClockPreference(Object objValue) {
+        if (KernelUtils.writeOneLine(GPU_CLOCK_FILE, objValue.toString())) {
+            int index = Integer.parseInt(objValue.toString());
+            updateGpuClockPreference(index);
+        } else {
+            Log.e(TAG, "Unable to change GPU clock: " + GPU_CLOCK_FILE);
+        }
+    }
+
+    public void readGpuClockPreference() {
+        int index = Integer.parseInt(KernelUtils.readOneLine(GPU_CLOCK_FILE));
+        mGpuClockPref.setValueIndex(index);
+        updateGpuClockPreference(index);
+    }
+
+    public void updateGpuClockPreference(int index) {
+        final Resources res = getResources();
+        String[] gpuClockEntries = res.getStringArray(R.array.gpu_clock_entries);
+        mGpuClockPref.setSummary(String.format(res.getString(R.string.gpu_clock_summary),
+               gpuClockEntries[index]));
+    }
+
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
         if (preference == mAccelerometer) {
@@ -353,6 +394,9 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
         }
         if (KEY_FONT_SIZE.equals(key)) {
             writeFontSizePreference(objValue);
+        }
+        if (KEY_GPU_CLOCK.equals(key)) {
+            writeGpuClockPreference(objValue);
         }
 
         return true;
