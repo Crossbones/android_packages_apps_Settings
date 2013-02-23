@@ -300,7 +300,7 @@ public class DisplaySettings extends SettingsPreferenceFragment implements
         updateAccelerometerRotationCheckbox();
         readFontSizePreference(mFontSizePref);
         updateScreenSaverSummary();
-        if (getResources().getBoolean(R.bool.device_enable_gpu_clock)) { 
+        if ((getResources().getBoolean(R.bool.device_enable_gpu_clock)) && (KernelUtils.fileExists(GPU_CLOCK_FILE))) { 
             readGpuClockPreference();
         }
         updateWifiDisplaySummary();
