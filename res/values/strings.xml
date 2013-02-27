@@ -35,13 +35,13 @@
     <string name="device_info_default">Unknown</string>
     <!-- [CHAR LIMIT=NONE] Device Info screen. Countdown for user taps to enable development settings -->
     <plurals name="show_dev_countdown">
-        <item quantity="one">You are now <xliff:g id="step_count">%1$d</xliff:g> step away from being a developer.</item>
-        <item quantity="other">You are now <xliff:g id="step_count">%1$d</xliff:g> steps away from being a developer.</item>
+        <item quantity="one">You are now <xliff:g id="step_count">%1$d</xliff:g> step away from revealing developer options.</item>
+        <item quantity="other">You are now <xliff:g id="step_count">%1$d</xliff:g> steps away from revealing developer options</item>
     </plurals>
     <!-- [CHAR LIMIT=NONE] Device Info screen. Confirmation that developer settings are enabled -->
-    <string name="show_dev_on">You are now a developer!</string>
-    <!-- [CHAR LIMIT=NONE] Device Info screen. Okay we get it, stop pressing, you already have it on -->
-    <string name="show_dev_already">No need, you are already a developer.</string>
+    <string name="show_dev_on">You have now enabled developer settings!</string>
+    <!-- [CHAR LIMIT=NONE] Device Info screen. Stop tapping me -->
+    <string name="show_dev_already">No need, you've already enabled the developer options</string>
 
     <!-- Category headings in left-pane header menu --> <skip />
     <!-- Settings main menu category heading. Wireless and networks (Wi-Fi, Bluetooth, data usage...). [CHAR LIMIT=40] -->
@@ -3948,12 +3948,12 @@
     <!-- UI debug setting: force hardware acceleration to render apps [CHAR LIMIT=25] -->
     <string name="force_hw_ui">Force GPU rendering</string>
     <!-- UI debug setting: force hardware acceleration summary [CHAR LIMIT=50] -->
-    <string name="force_hw_ui_summary">Force use of GPU for 2d drawing</string>
+    <string name="force_hw_ui_summary">Force the GPU to render 2D drawing. Increased performance at the cost of some RAM</string>
 
     <!-- UI debug setting: force anti-aliasing to render apps [CHAR LIMIT=25] -->
     <string name="force_msaa">Force 4x MSAA</string>
     <!-- UI debug setting: force anti-aliasing summary [CHAR LIMIT=50] -->
-    <string name="force_msaa_summary">Enable 4x MSAA in OpenGL ES 2.0 apps</string>
+    <string name="force_msaa_summary">Enable 4x MSAA to enhance the graphics of some games at the cost of performance</string>
 
     <!-- UI debug setting: profile time taken by hardware acceleration to render apps [CHAR LIMIT=25] -->
     <string name="track_frame_time">Profile GPU rendering</string>
@@ -4392,14 +4392,14 @@
     <string name="feature_not_supported">Your kernel does not support this feature</string>
 
     <!-- CPU settings -->
-    <string name="cpu_settings">CPU</string>
-    <string name="cpu_governors_title">Governor</string>
+    <string name="cpu_settings">CPU options</string>
+    <string name="cpu_governors_title">CPU Governor</string>
     <string name="cpu_governors_summary">List of available governors\nCurrently selected: %S</string>
     <string name="cpu_min_freq_title">Min CPU frequency</string>
     <string name="cpu_min_freq_summary">Minimum CPU frequency\nCurrently: %s</string>
-    <string name="cpu_max_freq_title">Max CPU frequency</string>
+    <string name="cpu_max_freq_title">Maximum CPU frequency</string>
     <string name="cpu_max_freq_summary">Maximum CPU frequency\nCurrently: %s</string>
-    <string name="cpu_schedulers_title">Scheduler</string>
+    <string name="cpu_schedulers_title">I/O Scheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
 
     <!-- Sound settings -->
@@ -4408,10 +4408,10 @@
     <string name="bln_blink_title">BLN blink</string>
     <string name="bln_blink_summary">Capacitive buttons will blink when notification is received</string>
     <string name="high_perf_sound_title">High performance sound</string>
-    <string name="high_perf_sound_summary">Improve sound quality through driver</string>
+    <string name="high_perf_sound_summary">Improves sound quality via the driver</string>
 
     <!-- Display settings -->
-    <string name="gpu_clock_title">GPU clock speed</string>
+    <string name="gpu_clock_title">GPU frequency speed</string>
     <string name="gpu_clock_summary" translatable="false">%1$s</string>
 
 </resources>
