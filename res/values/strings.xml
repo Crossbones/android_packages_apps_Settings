@@ -41,7 +41,7 @@
     <!-- [CHAR LIMIT=NONE] Device Info screen. Confirmation that developer settings are enabled -->
     <string name="show_dev_on">You have now enabled developer settings!</string>
     <!-- [CHAR LIMIT=NONE] Device Info screen. Stop tapping me -->
-    <string name="show_dev_already">No need, you've already enabled the developer options</string>
+    <string name="show_dev_already">No need, you have already enabled the developer options</string>
 
     <!-- Category headings in left-pane header menu --> <skip />
     <!-- Settings main menu category heading. Wireless and networks (Wi-Fi, Bluetooth, data usage...). [CHAR LIMIT=40] -->
