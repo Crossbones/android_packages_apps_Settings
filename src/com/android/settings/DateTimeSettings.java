@@ -61,6 +61,9 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private static final int DIALOG_DATEPICKER = 0;
     private static final int DIALOG_TIMEPICKER = 1;
 
+    private static final String STATUS_BAR_AM_PM = "status_bar_am_pm";
+    private static final String STATUS_BAR_CLOCK = "status_bar_show_clock";
+
     // have we been launched from the setup wizard?
     protected static final String EXTRA_IS_FIRST_RUN = "firstRun";
 
@@ -71,6 +74,8 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private Preference mTimeZone;
     private Preference mDatePref;
     private ListPreference mDateFormat;
+    private ListPreference mStatusBarAmPm;
+    private CheckBoxPreference mStatusBarClock;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -106,10 +111,15 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         mTimeZone = findPreference("timezone");
         mDatePref = findPreference("date");
         mDateFormat = (ListPreference) findPreference(KEY_DATE_FORMAT);
+        mStatusBarClock = (CheckBoxPreference) findPreference(STATUS_BAR_CLOCK);
+        mStatusBarAmPm = (ListPreference) findPreference(STATUS_BAR_AM_PM);
         if (isFirstRun) {
             getPreferenceScreen().removePreference(mTime24Pref);
             getPreferenceScreen().removePreference(mDateFormat);
         }
+
+        mStatusBarClock.setChecked((Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+                Settings.System.STATUS_BAR_CLOCK, 1) == 1));
 
         String [] dateFormats = getResources().getStringArray(R.array.date_format_values);
         String [] formattedDates = new String[dateFormats.length];
@@ -132,6 +142,18 @@ public class DateTimeSettings extends SettingsPreferenceFragment
             }
         }
 
+        try {
+            if (Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+                    Settings.System.TIME_12_24) == 24) {
+                mStatusBarAmPm.setEnabled(false);
+                mStatusBarAmPm.setSummary(R.string.status_bar_am_pm_info);
+            }
+        } catch (SettingNotFoundException e ) {
+        }
+
+        int statusBarAmPm = Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+                Settings.System.STATUS_BAR_AM_PM, 2);
+
         mDateFormat.setEntries(formattedDates);
         mDateFormat.setEntryValues(R.array.date_format_values);
         mDateFormat.setValue(currentFormat);
@@ -139,6 +161,10 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         mTimePref.setEnabled(!autoTimeEnabled);
         mDatePref.setEnabled(!autoTimeEnabled);
         mTimeZone.setEnabled(!autoTimeZoneEnabled);
+
+        mStatusBarAmPm.setValue(String.valueOf(statusBarAmPm));
+        mStatusBarAmPm.setSummary(mStatusBarAmPm.getEntry());
+        mStatusBarAmPm.setOnPreferenceChangeListener(this);
     }
 
     @Override
@@ -286,8 +312,21 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         }
     }
     */
+    public boolean onPreferenceChange(Preference preference, Object newValue) {
+        if (preference == mStatusBarAmPm) {
+            int statusBarAmPm = Integer.valueOf((String) newValue);
+            int index = mStatusBarAmPm.findIndexOfValue((String) newValue);
+            Settings.System.putInt(getActivity().getApplicationContext().getContentResolver(),
+                    Settings.System.STATUS_BAR_AM_PM, statusBarAmPm);
+            mStatusBarAmPm.setSummary(mStatusBarAmPm.getEntries()[index]);
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+        boolean value;  
         if (preference == mDatePref) {
             showDialog(DIALOG_DATEPICKER);
         } else if (preference == mTimePref) {
@@ -298,6 +337,11 @@ public class DateTimeSettings extends SettingsPreferenceFragment
             set24Hour(((CheckBoxPreference)mTime24Pref).isChecked());
             updateTimeAndDateDisplay(getActivity());
             timeUpdated();
+        } else if (preference == mStatusBarClock) {
+            value = mStatusBarClock.isChecked();
+            Settings.System.putInt(getActivity().getApplicationContext().getContentResolver(),
+                    Settings.System.STATUS_BAR_CLOCK, value ? 1 : 0);
+            return true;
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
     }
