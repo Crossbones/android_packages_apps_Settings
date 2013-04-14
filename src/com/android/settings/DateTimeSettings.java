@@ -1,18 +1,18 @@
 /*
- * Copyright (C) 2008 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2008 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package com.android.settings;
 
@@ -32,19 +32,23 @@ import android.os.SystemClock;
 import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
+import android.preference.Preference.OnPreferenceChangeListener; 
 import android.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
 import android.text.format.DateFormat;
 import android.widget.DatePicker;
 import android.widget.TimePicker;
+import android.util.Log;
+
+import com.android.settings.R;
 
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
 public class DateTimeSettings extends SettingsPreferenceFragment
-        implements OnSharedPreferenceChangeListener,
+        implements OnPreferenceChangeListener, OnSharedPreferenceChangeListener,
                 TimePickerDialog.OnTimeSetListener, DatePickerDialog.OnDateSetListener {
 
     private static final String HOURS_12 = "12";
@@ -57,12 +61,11 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private static final String KEY_DATE_FORMAT = "date_format";
     private static final String KEY_AUTO_TIME = "auto_time";
     private static final String KEY_AUTO_TIME_ZONE = "auto_zone";
+    private static final String KEY_ENABLE = "clock_style";
+    private static final String KEY_AM_PM_STYLE = "clock_am_pm_style"; 
 
     private static final int DIALOG_DATEPICKER = 0;
     private static final int DIALOG_TIMEPICKER = 1;
-
-    private static final String STATUS_BAR_AM_PM = "status_bar_am_pm";
-    private static final String STATUS_BAR_CLOCK = "status_bar_show_clock";
 
     // have we been launched from the setup wizard?
     protected static final String EXTRA_IS_FIRST_RUN = "firstRun";
@@ -74,14 +77,15 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private Preference mTimeZone;
     private Preference mDatePref;
     private ListPreference mDateFormat;
-    private ListPreference mStatusBarAmPm;
-    private CheckBoxPreference mStatusBarClock;
+    private ListPreference mClockStyle;
+    private ListPreference mClockAmPmstyle; 
 
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
 
         addPreferencesFromResource(R.xml.date_time_prefs);
+        addPreferencesFromResource(R.xml.statusbar_clock_prefs); 
 
         initUI();
     }
@@ -111,15 +115,14 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         mTimeZone = findPreference("timezone");
         mDatePref = findPreference("date");
         mDateFormat = (ListPreference) findPreference(KEY_DATE_FORMAT);
-        mStatusBarClock = (CheckBoxPreference) findPreference(STATUS_BAR_CLOCK);
-        mStatusBarAmPm = (ListPreference) findPreference(STATUS_BAR_AM_PM);
+        mClockStyle = (ListPreference) findPreference(KEY_ENABLE);
+        mClockAmPmstyle = (ListPreference) findPreference(KEY_AM_PM_STYLE);
         if (isFirstRun) {
             getPreferenceScreen().removePreference(mTime24Pref);
             getPreferenceScreen().removePreference(mDateFormat);
+            getPreferenceScreen().removePreference(mClockStyle);
+            getPreferenceScreen().removePreference(mClockAmPmstyle);
         }
-
-        mStatusBarClock.setChecked((Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
-                Settings.System.STATUS_BAR_CLOCK, 1) == 1));
 
         String [] dateFormats = getResources().getStringArray(R.array.date_format_values);
         String [] formattedDates = new String[dateFormats.length];
@@ -142,18 +145,6 @@ public class DateTimeSettings extends SettingsPreferenceFragment
             }
         }
 
-        try {
-            if (Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
-                    Settings.System.TIME_12_24) == 24) {
-                mStatusBarAmPm.setEnabled(false);
-                mStatusBarAmPm.setSummary(R.string.status_bar_am_pm_info);
-            }
-        } catch (SettingNotFoundException e ) {
-        }
-
-        int statusBarAmPm = Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
-                Settings.System.STATUS_BAR_AM_PM, 2);
-
         mDateFormat.setEntries(formattedDates);
         mDateFormat.setEntryValues(R.array.date_format_values);
         mDateFormat.setValue(currentFormat);
@@ -162,9 +153,17 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         mDatePref.setEnabled(!autoTimeEnabled);
         mTimeZone.setEnabled(!autoTimeZoneEnabled);
 
-        mStatusBarAmPm.setValue(String.valueOf(statusBarAmPm));
-        mStatusBarAmPm.setSummary(mStatusBarAmPm.getEntry());
-        mStatusBarAmPm.setOnPreferenceChangeListener(this);
+
+        mClockStyle.setOnPreferenceChangeListener(this);
+        mClockStyle.setValue(Integer.toString(Settings.System.getInt(getActivity()
+                .getContentResolver(), Settings.System.STATUSBAR_CLOCK_STYLE,
+                1)));
+
+
+        mClockAmPmstyle.setOnPreferenceChangeListener(this);
+        mClockAmPmstyle.setValue(Integer.toString(Settings.System.getInt(getActivity()
+                .getContentResolver(), Settings.System.STATUSBAR_CLOCK_AM_PM_STYLE,
+                2))); 
     }
 
     @Override
@@ -232,6 +231,26 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     }
 
     @Override
+    public boolean onPreferenceChange(Preference preference, Object newValue) {
+        boolean result = false;
+
+        if (preference == mClockAmPmstyle) {
+
+            int val = Integer.parseInt((String) newValue);
+            result = Settings.System.putInt(getActivity().getContentResolver(),
+                    Settings.System.STATUSBAR_CLOCK_AM_PM_STYLE, val);
+
+        } else if (preference == mClockStyle) {
+
+            int val = Integer.parseInt((String) newValue);
+            result = Settings.System.putInt(getActivity().getContentResolver(),
+                    Settings.System.STATUSBAR_CLOCK_STYLE, val);
+
+        }
+        return result;
+    } 
+
+    @Override
     public void onSharedPreferenceChanged(SharedPreferences preferences, String key) {
         if (key.equals(KEY_DATE_FORMAT)) {
             String format = preferences.getString(key,
@@ -289,44 +308,31 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     /*
     @Override
     public void onPrepareDialog(int id, Dialog d) {
-        switch (id) {
-        case DIALOG_DATEPICKER: {
-            DatePickerDialog datePicker = (DatePickerDialog)d;
-            final Calendar calendar = Calendar.getInstance();
-            datePicker.updateDate(
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH));
-            break;
-        }
-        case DIALOG_TIMEPICKER: {
-            TimePickerDialog timePicker = (TimePickerDialog)d;
-            final Calendar calendar = Calendar.getInstance();
-            timePicker.updateTime(
-                    calendar.get(Calendar.HOUR_OF_DAY),
-                    calendar.get(Calendar.MINUTE));
-            break;
-        }
-        default:
-            break;
-        }
+	switch (id) {
+	case DIALOG_DATEPICKER: {
+	    DatePickerDialog datePicker = (DatePickerDialog)d;
+	    final Calendar calendar = Calendar.getInstance();
+	    datePicker.updateDate(
+		    calendar.get(Calendar.YEAR),
+		    calendar.get(Calendar.MONTH),
+		    calendar.get(Calendar.DAY_OF_MONTH));
+	    break;
+	}
+	case DIALOG_TIMEPICKER: {
+	    TimePickerDialog timePicker = (TimePickerDialog)d;
+	    final Calendar calendar = Calendar.getInstance();
+	    timePicker.updateTime(
+	    	    calendar.get(Calendar.HOUR_OF_DAY),
+	    	    calendar.get(Calendar.MINUTE));
+	    break;
+	}	
+	default:
+	    break;
+	}
     }
     */
-    public boolean onPreferenceChange(Preference preference, Object newValue) {
-        if (preference == mStatusBarAmPm) {
-            int statusBarAmPm = Integer.valueOf((String) newValue);
-            int index = mStatusBarAmPm.findIndexOfValue((String) newValue);
-            Settings.System.putInt(getActivity().getApplicationContext().getContentResolver(),
-                    Settings.System.STATUS_BAR_AM_PM, statusBarAmPm);
-            mStatusBarAmPm.setSummary(mStatusBarAmPm.getEntries()[index]);
-            return true;
-        }
-        return false;
-    }
-
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
-        boolean value;  
         if (preference == mDatePref) {
             showDialog(DIALOG_DATEPICKER);
         } else if (preference == mTimePref) {
@@ -337,11 +343,6 @@ public class DateTimeSettings extends SettingsPreferenceFragment
             set24Hour(((CheckBoxPreference)mTime24Pref).isChecked());
             updateTimeAndDateDisplay(getActivity());
             timeUpdated();
-        } else if (preference == mStatusBarClock) {
-            value = mStatusBarClock.isChecked();
-            Settings.System.putInt(getActivity().getApplicationContext().getContentResolver(),
-                    Settings.System.STATUS_BAR_CLOCK, value ? 1 : 0);
-            return true;
         }
         return super.onPreferenceTreeClick(preferenceScreen, preference);
     }
@@ -357,7 +358,7 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         getActivity().sendBroadcast(timeChanged);
     }
 
-    /*  Get & Set values from the system settings  */
+    /* Get & Set values from the system settings */
 
     private boolean is24Hour() {
         return DateFormat.is24HourFormat(getActivity());
@@ -409,7 +410,7 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         }
     }
 
-    /*  Helper routines to format timezone */
+    /* Helper routines to format timezone */
 
     /* package */ static String getTimeZoneText(TimeZone tz) {
         // Similar to new SimpleDateFormat("'GMT'Z, zzzz").format(new Date()), but

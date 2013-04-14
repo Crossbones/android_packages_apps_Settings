@@ -4414,9 +4414,8 @@
     <string name="gpu_clock_title">GPU frequency speed</string>
     <string name="gpu_clock_summary" translatable="false">%1$s</string>
 
-    <!-- Statusbar settings -->
-    <string name="status_bar_show_clock_title">Show clock</string>
-    <string name="status_bar_am_pm_title">AM/PM style</string>
-    <string name="status_bar_am_pm_info">24-hour clock is enabled</string>
+    <!-- Statusbar clock settings -->
+    <string name="clock_title_enable">Clock style</string>
+    <string name="title_clock_ampm_entries">AM/PM style</string> 
 
 </resources>

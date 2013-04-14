@@ -785,17 +785,29 @@
         <item>Always allow</item>
     </string-array>
 
-    <!-- Status bar AM PM -->
-    <string-array name="entries_status_bar_am_pm">
-        <item>Normal</item>
-        <item>Small</item>
-        <item>None</item>
-    </string-array>
+    <!-- Status bar clock options -->
+  <string-array name="clock_style_entries">
+    <item>Right clock</item>
+    <item>Center clock</item>
+    <item>No clock</item>
+  </string-array>
 
-    <string-array name="values_status_bar_am_pm" translatable="false">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
+  <string-array name="clock_style_values" translatable="false">
+    <item>1</item>
+    <item>2</item>
+    <item>0</item>
+  </string-array>
+
+  <string-array name="clock_ampm_entries">
+    <item>Don\'t show</item>
+    <item>Small AM/PM</item>
+    <item>Regular AM/PM</item>
+  </string-array>
+
+  <string-array name="clock_ampm_values" translatable="false">
+    <item>2</item>
+    <item>1</item>
+    <item>0</item>
+  </string-array> 
 
 </resources>
