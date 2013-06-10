@@ -4417,11 +4417,14 @@
     <!-- Statusbar clock settings -->
     <string name="clock_title_enable">Clock style</string>
     <string name="title_clock_ampm_entries">AM/PM style</string> 
-
-    <!-- Launcher settings  -->
+    <!-- Crossbones Interface -->
+    <string name="header_category_interface">CROSSBONES INTERFACE</string>
+    <string name="themes_settings_title">Theme Chooser</string>
     <string name="launcher_settings_title">Launcher</string>
 
-    <!-- Themes settings  -->
-    <string name="themes_settings_title">Themes</string>
+    <!-- header summary -->
+    <string name="header_summary_cpumod">Kernel Modifications</string>
+    <string name="header_summary_themes">Apply Additional Themes</string>
+    <string name="header_summary_home">Launcher Modifications</string>
 
 </resources>

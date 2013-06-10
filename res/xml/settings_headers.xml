@@ -17,6 +17,39 @@
 <preference-headers
         xmlns:android="http://schemas.android.com/apk/res/android">
 
+   <!-- Crossbones Interface -->
+    <header
+        android:id="@+id/interface_section"
+        android:title="@string/header_category_interface" />
+
+    <!-- CPU Settings -->
+    <header
+        android:fragment="com.android.settings.CPUSettings"
+        android:icon="@drawable/ic_settings_cpu"
+        android:summary="@string/header_summary_cpumod"
+        android:title="@string/cpu_settings"
+        android:id="@+id/cpu_settings" />
+
+    <!-- Themes -->
+    <header
+        android:id="@+id/themes_settings"
+        android:icon="@drawable/ic_settings_themes"
+        android:summary="@string/header_summary_themes"
+        android:title="@string/themes_settings_title">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.tmobile.themechooser"
+            android:targetClass="com.tmobile.themechooser.ThemeChooser" />
+    </header>
+
+    <!-- Launcher -->
+    <header
+        android:id="@+id/launcher_settings"
+        android:icon="@drawable/ic_settings_launcher"
+        android:breadCrumbTitle="@string/launcher_settings_title"
+        android:title="@string/launcher_settings_title"
+        android:summary="@string/header_summary_home">
+    </header>
 
     <!-- WIRELESS and NETWORKS -->
     <header android:id="@+id/wireless_section"
@@ -97,30 +130,6 @@
         android:title="@string/applications_settings"
         android:id="@+id/application_settings" />
 
-    <!-- CPU Settings -->
-    <header
-        android:fragment="com.android.settings.CPUSettings"
-        android:icon="@drawable/ic_settings_cpu"
-        android:title="@string/cpu_settings"
-        android:id="@+id/cpu_settings" />
-
-    <!-- Launcher -->
-    <header
-        android:id="@+id/launcher_settings"
-        android:title="@string/launcher_settings_title"
-        android:icon="@drawable/ic_settings_launcher" />
-
-    <!-- Themes -->
-    <header
-        android:id="@+id/themes_settings"
-        android:icon="@drawable/ic_settings_themes"
-        android:title="@string/themes_settings_title">
-        <intent
-            android:action="android.intent.action.MAIN"
-            android:targetPackage="com.tmobile.themechooser"
-            android:targetClass="com.tmobile.themechooser.ThemeChooser" />
-    </header>
-
     <!-- Manage users -->
     <header
         android:fragment="com.android.settings.users.UserSettings"
@@ -185,13 +194,6 @@
     <header android:id="@+id/system_section"
         android:title="@string/header_category_system" />
 
-    <!-- Superuser -->
-    <header
-        android:id="@+id/superuser"
-        android:fragment="com.android.settings.cyanogenmod.superuser.PolicyNativeFragment"
-        android:icon="@drawable/ic_action_permission"
-        android:title="@string/superuser" />
-
     <!-- Date & Time -->
     <header
         android:id="@+id/date_time_settings"
@@ -212,6 +214,13 @@
         android:fragment="com.android.settings.DevelopmentSettings"
         android:icon="@drawable/ic_settings_development"
         android:title="@string/development_settings_title" />
+
+    <!-- Superuser -->
+    <header
+        android:id="@+id/superuser"
+        android:fragment="com.koushikdutta.superuser.PolicyNativeFragment"
+        android:icon="@drawable/ic_action_permission"
+        android:title="@string/superuser" />
 
     <!-- About Device -->
     <header
