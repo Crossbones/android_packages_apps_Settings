@@ -21,20 +21,16 @@
     <header
         android:id="@+id/interface_section"
         android:title="@string/header_category_interface" />
-
-    <!-- CPU Settings -->
-    <header
-        android:fragment="com.android.settings.CPUSettings"
-        android:icon="@drawable/ic_settings_cpu"
-        android:summary="@string/header_summary_cpumod"
-        android:title="@string/cpu_settings"
-        android:id="@+id/cpu_settings" />
+   
+   <!-- Launcher -->
+    <header  android:id="@+id/launcher_settings"
+        android:title="@string/launcher_settings_title"
+        android:icon="@drawable/ic_settings_launcher" />
 
     <!-- Themes -->
     <header
         android:id="@+id/themes_settings"
         android:icon="@drawable/ic_settings_themes"
-        android:summary="@string/header_summary_themes"
         android:title="@string/themes_settings_title">
         <intent
             android:action="android.intent.action.MAIN"
@@ -42,14 +38,12 @@
             android:targetClass="com.tmobile.themechooser.ThemeChooser" />
     </header>
 
-    <!-- Launcher -->
+    <!-- CPU Settings -->
     <header
-        android:id="@+id/launcher_settings"
-        android:icon="@drawable/ic_settings_launcher"
-        android:breadCrumbTitle="@string/launcher_settings_title"
-        android:title="@string/launcher_settings_title"
-        android:summary="@string/header_summary_home">
-    </header>
+        android:fragment="com.android.settings.CPUSettings"
+        android:icon="@drawable/ic_settings_cpu"
+        android:title="@string/cpu_settings"
+        android:id="@+id/cpu_settings" />
 
     <!-- WIRELESS and NETWORKS -->
     <header android:id="@+id/wireless_section"
