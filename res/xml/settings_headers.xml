@@ -18,19 +18,14 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
    <!-- Crossbones Interface -->
-    <header
-        android:id="@+id/interface_section"
+    <header android:id="@+id/interface_section"
         android:title="@string/header_category_interface" />
    
-   <!-- Launcher -->
-    <header  android:id="@+id/launcher_settings"
-        android:title="@string/launcher_settings_title"
-        android:icon="@drawable/ic_settings_launcher" />
-
     <!-- Themes -->
     <header
         android:id="@+id/themes_settings"
         android:icon="@drawable/ic_settings_themes"
+        android:summary="@string/header_summary_themes"
         android:title="@string/themes_settings_title">
         <intent
             android:action="android.intent.action.MAIN"
@@ -42,6 +37,7 @@
     <header
         android:fragment="com.android.settings.CPUSettings"
         android:icon="@drawable/ic_settings_cpu"
+        android:summary="@string/header_summary_cpumod"
         android:title="@string/cpu_settings"
         android:id="@+id/cpu_settings" />
 
