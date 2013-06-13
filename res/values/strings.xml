@@ -4417,5 +4417,14 @@
     <!-- Statusbar clock settings -->
     <string name="clock_title_enable">Clock style</string>
     <string name="title_clock_ampm_entries">AM/PM style</string> 
+    
+    <!-- Crossbones Interface -->
+    <!-- Settings main menu category heading. Interface (Launcher, Themes, System). [CHAR LIMIT=40] -->
+    <string name="header_category_interface">CROSSBONES INTERFACE</string>
+    <string name="themes_settings_title">Theme Chooser</string>
+    
+    <!--Header Summaries -->
+    <string name="header_summary_themes">Apply Additional Themes</string>
+    <string name="header_summary_cpumod">Kernel Modifications</string>
 
 </resources>

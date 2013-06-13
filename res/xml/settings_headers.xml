@@ -17,6 +17,29 @@
 <preference-headers
         xmlns:android="http://schemas.android.com/apk/res/android">
 
+   <!-- Crossbones Interface -->
+    <header android:id="@+id/interface_section"
+        android:title="@string/header_category_interface" />
+   
+    <!-- Themes -->
+    <header
+        android:id="@+id/themes_settings"
+        android:icon="@drawable/ic_settings_themes"
+        android:summary="@string/header_summary_themes"
+        android:title="@string/themes_settings_title">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.tmobile.themechooser"
+            android:targetClass="com.tmobile.themechooser.ThemeChooser" />
+    </header>
+
+    <!-- CPU Settings -->
+    <header
+        android:fragment="com.android.settings.CPUSettings"
+        android:icon="@drawable/ic_settings_cpu"
+        android:summary="@string/header_summary_cpumod"
+        android:title="@string/cpu_settings"
+        android:id="@+id/cpu_settings" />
 
     <!-- WIRELESS and NETWORKS -->
     <header android:id="@+id/wireless_section"
@@ -96,13 +119,6 @@
         android:icon="@drawable/ic_settings_applications"
         android:title="@string/applications_settings"
         android:id="@+id/application_settings" />
-
-    <!-- CPU Settings -->
-    <header
-        android:fragment="com.android.settings.CPUSettings"
-        android:icon="@drawable/ic_settings_cpu"
-        android:title="@string/cpu_settings"
-        android:id="@+id/cpu_settings" />
 
     <!-- Manage users -->
     <header
@@ -188,6 +204,13 @@
         android:fragment="com.android.settings.DevelopmentSettings"
         android:icon="@drawable/ic_settings_development"
         android:title="@string/development_settings_title" />
+
+    <!-- Superuser -->
+    <header
+        android:id="@+id/superuser"
+        android:fragment="com.koushikdutta.superuser.PolicyNativeFragment"
+        android:icon="@drawable/ic_action_permission"
+        android:title="@string/superuser" />
 
     <!-- About Device -->
     <header
