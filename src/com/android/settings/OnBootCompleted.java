@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 The CyanogenMod Project
- * Copyright (C) 2012 Crossbones Software
+ * Copyright (C) 2013 Crossbones Software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ public class OnBootCompleted extends IntentService {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
+        boolean prefEnable = prefs.getBoolean(CPUSettings.KEY_PREF_ENABLE, true);
         String governor = prefs.getString(CPUSettings.KEY_GOVERNOR, null);
         String minFrequency = prefs.getString(CPUSettings.KEY_MIN_FREQ, null);
         String maxFrequency = prefs.getString(CPUSettings.KEY_MAX_FREQ, null);
@@ -51,53 +52,66 @@ public class OnBootCompleted extends IntentService {
         if (prefs == null) {
             Log.i(TAG, "No settings saved. No kernel specific settings to restore.");
         } else {
-            // Set previous CPU governor
-            if (governor != null) {
-                List<String> governors = Arrays.asList(KernelUtils.readOneLine(
-                        CPUSettings.GOVERNORS_LIST_FILE).split(" "));
-                if(governors.contains(governor)) {
-                    KernelUtils.writeOneLine(CPUSettings.GOVERNOR_FILE, governor);
-                }
-            }
-            // Set previous min and max CPU frequencies
-            if (KernelUtils.fileExists(CPUSettings.FREQ_LIST_FILE)) {
-                List<String> frequencies = Arrays.asList(KernelUtils.readOneLine(
-                        CPUSettings.FREQ_LIST_FILE).split(" "));
-                if (minFrequency != null && frequencies.contains(minFrequency)) {
-                    if (KernelUtils.fileExists(CPUSettings.FREQ_MIN_FILE)) {
-                        KernelUtils.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+            if (prefEnable) {
+                Log.i(TAG, "CPU Preferences enabled.");
+
+                // Set previous CPU governor
+                if (governor != null) {
+                    List<String> governors = Arrays.asList(KernelUtils.readOneLine(
+                            CPUSettings.GOVERNORS_LIST_FILE).split(" "));
+                    if(governors.contains(governor)) {
+                        KernelUtils.writeOneLine(CPUSettings.GOVERNOR_FILE, governor);
                     }
                 }
-                if (maxFrequency != null && frequencies.contains(maxFrequency)) {
-                    if (KernelUtils.fileExists(CPUSettings.FREQ_MAX_FILE)) {
-                        KernelUtils.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
+
+                // Set previous min and max CPU frequencies
+                if (KernelUtils.fileExists(CPUSettings.FREQ_LIST_FILE)) {
+                    List<String> frequencies = Arrays.asList(KernelUtils.readOneLine(
+                            CPUSettings.FREQ_LIST_FILE).split(" "));
+                    if (minFrequency != null && frequencies.contains(minFrequency)) {
+                        if (KernelUtils.fileExists(CPUSettings.FREQ_MIN_FILE)) {
+                            KernelUtils.writeOneLine(CPUSettings.FREQ_MIN_FILE, minFrequency);
+                        }
+                    }
+                    if (maxFrequency != null && frequencies.contains(maxFrequency)) {
+                        if (KernelUtils.fileExists(CPUSettings.FREQ_MAX_FILE)) {
+                            KernelUtils.writeOneLine(CPUSettings.FREQ_MAX_FILE, maxFrequency);
+                        }
                     }
                 }
-            }
-            // Set previous CPU scheduler
-            if (scheduler != null) {
-                List<String> schedulers = Arrays.asList(KernelUtils.readOneLine(
-                        CPUSettings.SCHEDULER_FILE).split(" "));
-                if (schedulers.contains(scheduler)) {
-                    KernelUtils.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
+
+                // Set previous CPU scheduler
+                if (scheduler != null) {
+                    List<String> schedulers = Arrays.asList(KernelUtils.readOneLine(
+                            CPUSettings.SCHEDULER_FILE).split(" "));
+                    if (schedulers.contains(scheduler)) {
+                        KernelUtils.writeOneLine(CPUSettings.SCHEDULER_FILE, scheduler);
+                    }
                 }
+            } else {
+                Log.i(TAG, "CPU Preferences disabled.");
             }
+
             // Set previous GPU clock frequency
             if (KernelUtils.fileExists(DisplaySettings.GPU_CLOCK_FILE) && gpuClock != null) {
                 KernelUtils.writeOneLine(DisplaySettings.GPU_CLOCK_FILE, gpuClock);
             }
+
             // Set previous High Performance Sound setting
             if (KernelUtils.fileExists(SoundSettings.HIGH_PERF_SOUND_FILE)) {
                 KernelUtils.writeOneLine(SoundSettings.HIGH_PERF_SOUND_FILE, Integer.toString(highPerfSound ? 1 : 0));
             }
+
             // Set previous BLN setting
             if (KernelUtils.fileExists(SoundSettings.BLN_FILE)) {
                 KernelUtils.writeOneLine(SoundSettings.BLN_FILE, Integer.toString(bln ? 1 : 0));
             }
+
             // Set previous BLN Blink setting
             if (KernelUtils.fileExists(SoundSettings.BLN_FILE) && KernelUtils.fileExists(SoundSettings.BLN_BLINK_FILE)) {
                 KernelUtils.writeOneLine(SoundSettings.BLN_BLINK_FILE, Integer.toString(blnBlink ? 1 : 0));
             }
+
             Log.i(TAG, "Kernel specific settings restored.");
         }
     }

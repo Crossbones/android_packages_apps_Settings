@@ -4393,12 +4393,13 @@
 
     <!-- CPU settings -->
     <string name="cpu_settings">CPU options</string>
+    <string name="cpu_pref_enable_title">Enable CPU control</string>
     <string name="cpu_governors_title">CPU Governor</string>
     <string name="cpu_governors_summary">List of available governors\nCurrently selected: %S</string>
-    <string name="cpu_min_freq_title">Min CPU frequency</string>
-    <string name="cpu_min_freq_summary">Minimum CPU frequency\nCurrently: %s</string>
+    <string name="cpu_min_freq_title">Minimum CPU frequency</string>
+    <string name="cpu_min_freq_summary">Currently: %s</string>
     <string name="cpu_max_freq_title">Maximum CPU frequency</string>
-    <string name="cpu_max_freq_summary">Maximum CPU frequency\nCurrently: %s</string>
+    <string name="cpu_max_freq_summary">Currently: %s</string>
     <string name="cpu_schedulers_title">I/O Scheduler</string>
     <string name="cpu_schedulers_summary">List of available schedulers\nCurrently selected: %s</string>
 

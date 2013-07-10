@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 The CyanogenMod Project
- * Copyright (C) 2012 Crossbones Software
+ * Copyright (C) 2013 Crossbones Software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package com.android.settings;
 import com.android.settings.R;
 
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -31,6 +32,7 @@ import android.preference.PreferenceScreen;
 public class CPUSettings extends SettingsPreferenceFragment implements
         Preference.OnPreferenceChangeListener {
 
+    public static final String KEY_PREF_ENABLE = "cpu_pref_enable";
     public static final String KEY_GOVERNOR = "cpu_governor";
     public static final String KEY_MIN_FREQ = "cpu_freq_min";
     public static final String KEY_MAX_FREQ = "cpu_freq_max";
@@ -48,6 +50,7 @@ public class CPUSettings extends SettingsPreferenceFragment implements
     private String mMaxFrequencyFormat;
     private String mSchedulerFormat;
 
+    private CheckBoxPreference mPrefEnable;
     private ListPreference mGovernorPref;
     private ListPreference mMinFrequencyPref;
     private ListPreference mMaxFrequencyPref;
@@ -68,6 +71,7 @@ public class CPUSettings extends SettingsPreferenceFragment implements
 
         PreferenceScreen PrefScreen = getPreferenceScreen();
 
+        mPrefEnable = (CheckBoxPreference) PrefScreen.findPreference(KEY_PREF_ENABLE);
         mGovernorPref = (ListPreference) PrefScreen.findPreference(KEY_GOVERNOR);
         mMinFrequencyPref = (ListPreference) PrefScreen.findPreference(KEY_MIN_FREQ);
         mMaxFrequencyPref = (ListPreference) PrefScreen.findPreference(KEY_MAX_FREQ);
@@ -132,7 +136,6 @@ public class CPUSettings extends SettingsPreferenceFragment implements
             mSchedulerPref.setSummary(String.format(mSchedulerFormat, schedulerCurrent));
             mSchedulerPref.setOnPreferenceChangeListener(this);
         }
-
     }
 
     @Override
@@ -188,11 +191,9 @@ public class CPUSettings extends SettingsPreferenceFragment implements
                 if (preference == mGovernorPref) {
                     mGovernorPref.setSummary(String.format(mGovernorFormat, (String) newValue));
                 } else if (preference == mMinFrequencyPref) {
-                    mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat,
-                            toMHz((String) newValue)));
+                    mMinFrequencyPref.setSummary(String.format(mMinFrequencyFormat, toMHz((String) newValue)));
                 } else if (preference == mMaxFrequencyPref) {
-                    mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat,
-                            toMHz((String) newValue)));
+                    mMaxFrequencyPref.setSummary(String.format(mMaxFrequencyFormat, toMHz((String) newValue)));
                 } else if (preference == mSchedulerPref) {
                     mSchedulerPref.setSummary(String.format(mSchedulerFormat, (String) newValue));
                 }
