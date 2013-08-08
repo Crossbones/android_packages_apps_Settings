@@ -4419,11 +4419,4 @@
     <string name="clock_title_enable">Clock style</string>
     <string name="title_clock_ampm_entries">AM/PM style</string> 
 
-    <!-- INTERFACE Settings  -->
-    <!-- Settings main menu category heading. Interface. [CHAR LIMIT=40] -->
-    <string name="header_category_interface">INTERFACE</string>
-
-    <!-- Themes settings  -->
-    <string name="themes_settings_title">Themes</string>
-
 </resources>
