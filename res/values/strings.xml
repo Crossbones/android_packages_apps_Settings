@@ -4571,5 +4571,5 @@
 
     <!-- Statusbar clock settings -->
     <string name="clock_title_enable">Clock style</string>
-    <string name="title_clock_ampm_entries">AM/PM style</string> 
+    <string name="title_clock_ampm_entries">AM/PM style</string>
 </resources>
